@@ -1,0 +1,161 @@
+CATEGORY: Java Collections
+QUESTION:
+Назовите основные интерфейсы Java Collections Framework.
+ANSWER:
+Collection, List, Set, Queue, Deque, Map (Map не наследует Collection, но является частью фреймворка).
+===
+CATEGORY: Java Collections
+QUESTION:
+В чем разница между ArrayList и LinkedList?
+ANSWER:
+ArrayList: реализован на основе динамического массива. Быстрый доступ по индексу O(1). Медленная вставка/удаление в середину/начало O(N) (сдвиг элементов).
+LinkedList: двусвязный список. Медленный доступ по индексу O(N) (перебор). Быстрая вставка/удаление O(1) (если есть ссылка на узел, например через Iterator). Требует больше памяти (хранение ссылок).
+===
+CATEGORY: Java Collections
+QUESTION:
+Как устроена HashMap внутри?
+ANSWER:
+Массив "бакетов" (корзин). Ключ преобразуется в хэш, хэш — в индекс бакета. В бакете хранится связный список (или красно-черное дерево при большом кол-ве коллизий, начиная с Java 8) пар "ключ-значение".
+===
+CATEGORY: Java Collections
+QUESTION:
+Что такое коллизия в HashMap и как она разрешается?
+ANSWER:
+Ситуация, когда у разных ключей совпадает хэш-код (или индекс бакета).
+Разрешается методом цепочек (Chaining): элементы с одинаковым индексом хранятся в связном списке (или дереве) внутри одного бакета.
+===
+CATEGORY: Java Collections
+QUESTION:
+В чем контракт между equals() и hashCode()?
+ANSWER:
+Если объекты равны по equals(), у них ОБЯЗАТЕЛЬНО должен быть одинаковый hashCode().
+Если у объектов одинаковый hashCode(), они НЕ ОБЯЗАТЕЛЬНО равны по equals() (это коллизия).
+===
+CATEGORY: Java Collections
+QUESTION:
+Почему важно переопределять equals() и hashCode() для ключей в HashMap?
+ANSWER:
+Без переопределения hashCode() вы не найдете бакет, куда положили объект (будет использоваться нативный хэш).
+Без переопределения equals() вы не сможете найти конкретный ключ внутри бакета при коллизии (сравнение будет по ссылкам).
+В итоге: get() вернет null, хотя объект "логически" есть в мапе.
+===
+CATEGORY: Java Collections
+QUESTION:
+Что будет, если использовать изменяемый (mutable) объект в качестве ключа HashMap?
+ANSWER:
+Если после вставки в Map изменить поле ключа, участвующее в hashCode(), то хэш ключа изменится.
+При поиске (get) Map будет искать объект в другом бакете (по новому хэшу) и не найдет его. Вернется null. Это причина утечек памяти и багов.
+===
+CATEGORY: Java Collections
+QUESTION:
+Какова временная сложность (Big O) основных операций в HashMap?
+ANSWER:
+В среднем: O(1) для get и put.
+В худшем случае (все ключи попали в один бакет): O(N) для списка или O(log N) для красно-черного дерева (Java 8+).
+===
+CATEGORY: Java Collections
+QUESTION:
+В чем разница между HashMap и Hashtable?
+ANSWER:
+HashMap: несинхронизирована (быстрее), позволяет null ключи и null значения.
+Hashtable: синхронизирована (медленнее, устарела), не позволяет null.
+===
+CATEGORY: Java Collections
+QUESTION:
+В чем разница между HashMap и TreeMap?
+ANSWER:
+HashMap: порядок элементов не гарантируется. Основана на хэшировании. O(1).
+TreeMap: элементы отсортированы по ключам (natural order или Comparator). Основана на красно-черном дереве. O(log N).
+===
+CATEGORY: Java Collections
+QUESTION:
+В чем разница между HashSet и TreeSet?
+ANSWER:
+HashSet: порядок не гарантирован. Внутри использует HashMap. O(1).
+TreeSet: хранит элементы в отсортированном порядке. Внутри использует TreeMap. O(log N).
+===
+CATEGORY: Java Collections
+QUESTION:
+Что такое LinkedHashMap?
+ANSWER:
+Наследник HashMap. Хранит порядок вставки элементов (insertion order) или порядок доступа (access order). Внутри использует двусвязный список для поддержания порядка.
+===
+CATEGORY: Java Collections
+QUESTION:
+Что такое PriorityQueue?
+ANSWER:
+Очередь с приоритетом. Элементы извлекаются не в порядке вставки (FIFO), а в соответствии с их приоритетом (сортировкой). Основана на куче (Heap). Сложность вставки/удаления O(log N).
+===
+CATEGORY: Java Collections
+QUESTION:
+Как сделать коллекцию потокобезопасной (thread-safe)?
+ANSWER:
+Использовать Collections.synchronizedList/Map/Set (оборачивает методы в synchronized блоке).
+Использовать классы из java.util.concurrent: ConcurrentHashMap, CopyOnWriteArrayList (предпочтительнее).
+===
+CATEGORY: Java Collections
+QUESTION:
+Как работает ConcurrentHashMap?
+ANSWER:
+Использует разделение блокировок (Lock Stripping) или CAS (Compare-And-Swap) операции (в Java 8+).
+Не блокирует всю мапу целиком при записи (как Hashtable), а блокирует только конкретный бакет (сегмент). Чтение (get) вообще не блокируется.
+===
+CATEGORY: Java Collections
+QUESTION:
+Что такое CopyOnWriteArrayList?
+ANSWER:
+Потокобезопасный список. При каждой операции изменения (add, set) создает новую копию внутреннего массива.
+Идеален для сценария "много чтений, мало записей" (например, список слушателей событий). Чтение очень быстрое (без блокировок).
+===
+CATEGORY: Java Collections
+QUESTION:
+Что такое Fail-Fast и Fail-Safe итераторы?
+ANSWER:
+Fail-Fast (ArrayList, HashMap): бросают ConcurrentModificationException, если коллекция была изменена структурно (add/remove) во время итерации кем-то, кроме самого итератора.
+Fail-Safe (ConcurrentHashMap, CopyOnWriteArrayList): работают с копией данных или в режиме слабой согласованности (weakly consistent), не бросают исключение, но могут не видеть свежих изменений.
+===
+CATEGORY: Java Collections
+QUESTION:
+Как удалить элемент из списка во время итерации?
+ANSWER:
+Только через метод Iterator.remove().
+Использование List.remove() внутри цикла foreach приведет к ConcurrentModificationException.
+С Java 8 можно использовать Collection.removeIf().
+===
+CATEGORY: Java Collections
+QUESTION:
+В чем разница между capacity и size в ArrayList?
+ANSWER:
+Capacity: размер внутреннего массива (сколько памяти выделено).
+Size: количество реально хранящихся элементов.
+Когда size достигает capacity, происходит ресайз (создается новый массив большего размера, обычно x1.5, и данные копируются).
+===
+CATEGORY: Java Collections
+QUESTION:
+Какая сложность вставки в середину ArrayList?
+ANSWER:
+O(N), так как необходимо сдвинуть все последующие элементы вправо на одну позицию.
+===
+CATEGORY: Java Collections
+QUESTION:
+Почему ArrayDeque быстрее Stack и LinkedList (как очереди)?
+ANSWER:
+Stack устарел (синхронизирован).
+LinkedList создает объект-узел (Node) для каждого элемента (нагрузка на GC, лишняя память).
+ArrayDeque использует массив, лучше локальность кэша процессора, нет лишних аллокаций.
+===
+CATEGORY: Java Collections
+QUESTION:
+Зачем нужен метод Collections.unmodifiableList()?
+ANSWER:
+Создает обертку (View), которая запрещает модификацию коллекции (add/remove бросают UnsupportedOperationException). Полезно для защиты инкапсуляции при возврате списка из геттера.
+(Важно: если изменить исходный список, изменения будут видны и через unmodifiable обертку).
+===
+CATEGORY: Java Collections
+QUESTION:
+Что такое List.of(), Set.of(), Map.of() (Java 9+)?
+ANSWER:
+Фабричные методы для создания неизменяемых (immutable) коллекций.
+Они действительно неизменяемые (нет связи с исходным массивом).
+Не допускают null элементов.
+Эффективны по памяти.

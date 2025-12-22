@@ -1,0 +1,86 @@
+CATEGORY: Java Core
+QUESTION:
+Написать Producer-Consumer на BlockingQueue.
+ANSWER:
+BlockingQueue<Integer> queue = new ArrayBlockingQueue<>(10);
+// Producer
+new Thread(() -> {
+    try {
+        while(true) queue.put(1); // Заблокируется, если очередь полна
+    } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+}).start();
+
+// Consumer
+new Thread(() -> {
+    try {
+        while(true) {
+            Integer item = queue.take(); // Заблокируется, если очередь пуста
+            System.out.println(item);
+        }
+    } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+}).start();
+===
+CATEGORY: Java Core
+QUESTION:
+Что такое String Pool и как он работает?
+ANSWER:
+String Pool — это специальная область в куче (Heap), где хранятся строковые литералы. Он позволяет экономить память за счёт переиспользования одинаковых строк. Например:
+String s1 = "cat"; String s2 = "cat"; // s1 == s2 (ссылаются на один объект в пуле)
+Оператор new String("cat") создаёт новый объект в куче, минуя пул, если явно не вызвать метод intern().
+Метод intern() помещает строку в String Pool (если её там ещё нет) и возвращает ссылку на строку из пула:
+String s = new String("cat").intern(); // s == "cat"
+===
+CATEGORY: Java Core
+QUESTION:
+Почему массивы ковариантны, а Generics — инвариантны?
+ANSWER:
+Массивы в Java ковариантны: Integer[] является подтипом Number[], поэтому допустимо написать Number[] arr = new Integer[10];
+Однако это небезопасно — попытка присвоить arr[0] = 3.14 приведёт к ArrayStoreException во время выполнения.
+Generics, напротив, инвариантны: List<Integer> не является подтипом List<Number>. Это обеспечивает безопасность на этапе компиляции и предотвращает подобные ошибки.
+===
+CATEGORY: Java Core
+QUESTION:
+Что такое classpath и для чего он нужен?
+ANSWER:
+Classpath — это параметр, указываемый JVM при запуске программы, который определяет, где искать пользовательские классы и пакеты (в виде .class-файлов или .jar-архивов).
+===
+CATEGORY: Java Core
+QUESTION:
+В чём разница между String, StringBuilder и StringBuffer?
+ANSWER:
+- String — неизменяемый (immutable); при конкатенации создаются новые объекты, что делает операции медленными.
+- StringBuilder — изменяемый, не потокобезопасный, оптимален для большинства случаев.
+- StringBuffer — изменяемый, потокобезопасный (методы синхронизированы), но медленнее StringBuilder.
+===
+CATEGORY: Java Core
+QUESTION:
+Как передаются аргументы в методы в Java — по значению или по ссылке?
+ANSWER:
+В Java всё передаётся всегда по значению.
+- Для примитивов: передаётся копия значения.
+- Для объектов: передаётся копия ссылки на объект (сам объект не копируется).
+  → Если изменить поля объекта внутри метода, изменения будут видны снаружи.
+  → Если внутри метода переприсвоить ссылку (obj = new Object()), внешняя ссылка останется неизменной.
+===
+CATEGORY: Java Core
+QUESTION:
+Что такое autoboxing/unboxing и какие проблемы он может вызывать?
+ANSWER:
+Autoboxing — автоматическое преобразование примитивов в их обёртки (например, int → Integer), unboxing — обратное преобразование (Integer → int).
+Проблемы:
+1. NullPointerException при unboxing null-значения.
+2. Снижение производительности из-за создания лишних объектов.
+3. Некорректное сравнение через ==: для объектов это сравнение ссылок, а не значений (кроме кэшируемого диапазона Integer от -128 до 127).CATEGORY: Java Core
+QUESTION:
+Можно ли переопределить статический метод?
+ANSWER:
+Нет. Статические методы принадлежат классу, а не объекту. Если объявить такой же метод в наследнике, это будет **скрытие** (hiding), а не переопределение (overriding). Полиморфизм не сработает.
+===
+CATEGORY: Java Core
+QUESTION:
+В чем разница между `String`, `StringBuilder` и `StringBuffer`?
+ANSWER:
+`String`: Неизменяемый (Immutable), медленная конкатенация.
+`StringBuilder`: Изменяемый, быстрый, не потокобезопасный.
+`StringBuffer`: Изменяемый, потокобезопасный (синхронизирован).
+===

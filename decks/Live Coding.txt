@@ -1,0 +1,270 @@
+CATEGORY: Live Coding
+QUESTION:
+Напишите потокобезопасный счетчик (Thread-Safe Counter).
+ANSWER:
+// Вариант 1: AtomicInteger (лучший)
+class Counter {
+    private AtomicInteger count = new AtomicInteger(0);
+    public void increment() { count.incrementAndGet(); }
+    public int get() { return count.get(); }
+}
+
+// Вариант 2: synchronized
+class CounterSync {
+    private int count = 0;
+    public synchronized void increment() { count++; }
+    public synchronized int get() { return count; }
+}
+===
+CATEGORY: Live Coding
+QUESTION:
+Реализуйте Singleton (Потокобезопасный).
+ANSWER:
+// Самый простой (Enum)
+public enum Singleton {
+    INSTANCE;
+}
+
+// Ленивый (Double-Checked Locking)
+class SingletonLazy {
+    private static volatile SingletonLazy instance;
+    private SingletonLazy() {}
+    public static SingletonLazy getInstance() {
+        if (instance == null) {
+            synchronized (SingletonLazy.class) {
+                if (instance == null) instance = new SingletonLazy();
+            }
+        }
+        return instance;
+    }
+}
+===
+CATEGORY: Live Coding
+QUESTION:
+Напишите код, вызывающий Deadlock.
+ANSWER:
+public void deadlock() {
+    Object lock1 = new Object();
+    Object lock2 = new Object();
+
+    Thread t1 = new Thread(() -> {
+        synchronized(lock1) {
+            try { Thread.sleep(100); } catch (Exception e) {}
+            synchronized(lock2) { System.out.println("T1"); }
+        }
+    });
+
+    Thread t2 = new Thread(() -> {
+        synchronized(lock2) {
+            try { Thread.sleep(100); } catch (Exception e) {}
+            synchronized(lock1) { System.out.println("T2"); }
+        }
+    });
+    t1.start(); t2.start();
+}
+===
+CATEGORY: Live Coding
+QUESTION:
+Задача на Stream API: Дан список строк. Оставить только те, длина которых > 5, привести к верхнему регистру, отсортировать и собрать в список.
+ANSWER:
+List<String> result = list.stream()
+    .filter(s -> s.length() > 5)
+    .map(String::toUpperCase)
+    .sorted()
+    .collect(Collectors.toList());
+
+===
+CATEGORY: Live Coding
+QUESTION:
+Что выведет этот код? (HashMap и Mutable key).
+class Key { int id; public Key(int id){this.id=id;}
+public int hashCode(){return id;}
+public boolean equals(Object o){ return ((Key)o).id == id;} }
+
+Map<Key, String> map = new HashMap<>();
+Key k = new Key(1);
+map.put(k, "Value");
+k.id = 2; // Изменяем ключ
+System.out.println(map.get(k));
+
+ANSWER:
+null.
+Хэш-код объекта изменился. HashMap ищет бакет по новому хэшу, а объект лежит в бакете, соответствующем старому.
+===
+CATEGORY: Live Coding
+QUESTION:
+Реализовать простейший LRU Cache (Least Recently Used) с фиксированным размером.
+ANSWER:
+// Самый простой способ - наследование от LinkedHashMap
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+class LRUCache<K, V> extends LinkedHashMap<K, V> {
+    private final int capacity;
+
+    public LRUCache(int capacity) {
+        // true = access order (порядок доступа), false = insertion order
+        super(capacity, 0.75f, true);
+        this.capacity = capacity;
+    }
+
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+        return size() > capacity; // Удалять, если превышен размер
+    }
+}
+===
+CATEGORY: Live Coding
+QUESTION:
+Задача: Подсчитать количество вхождений каждого слова в списке строк (Word Count).
+ANSWER:
+List<String> words = List.of("apple", "banana", "apple", "orange", "banana", "apple");
+
+Map<String, Long> counts = words.stream()
+    .collect(Collectors.groupingBy(
+        Function.identity(), // ключ - само слово
+        Collectors.counting() // значение - количество
+    ));
+// {apple=3, banana=2, orange=1}
+===
+CATEGORY: Live Coding
+QUESTION:
+Найти первый неповторяющийся символ в строке.
+ANSWER:
+String s = "swiss";
+
+Character result = s.chars()           // IntStream
+    .mapToObj(c -> (char) c)           // Stream<Character>
+    .collect(Collectors.groupingBy(Function.identity(), LinkedHashMap::new, Collectors.counting())) // Сохраняем порядок
+    .entrySet().stream()
+    .filter(entry -> entry.getValue() == 1L)
+    .map(Map.Entry::getKey)
+    .findFirst()
+    .orElse(null); // 'w'
+===
+CATEGORY: Live Coding
+QUESTION:
+Реализовать метод, который ждет завершения всех потоков из списка, но не дольше 1 секунды. (Используя CompletableFuture).
+ANSWER:
+public void waitAll(List<CompletableFuture<String>> futures) {
+    try {
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+            .get(1, TimeUnit.SECONDS);
+    } catch (Exception e) {
+        // TimeoutException или другие ошибки
+        e.printStackTrace();
+    }
+}
+===
+CATEGORY: Live Coding
+QUESTION:
+Реализуй класс ImmutablePerson.
+ANSWER:
+public final class ImmutablePerson {
+    private final String name;
+    private final List<String> hobbies;
+
+    public ImmutablePerson(String name, List<String> hobbies) {
+        this.name = name;
+        // Важно! Создаем копию списка, чтобы извне нельзя было его менять
+        this.hobbies = new ArrayList<>(hobbies);
+    }
+
+    public String getName() { return name; }
+
+    public List<String> getHobbies() {
+        // Важно! Возвращаем неизменяемую копию или unmodifiableList
+        return Collections.unmodifiableList(hobbies);
+    }
+}
+===
+CATEGORY: Live Coding
+QUESTION:
+Развернуть односвязный список (Reverse LinkedList).
+ANSWER:
+class ListNode { int val; ListNode next; }
+
+public ListNode reverseList(ListNode head) {
+    ListNode prev = null;
+    ListNode current = head;
+    while (current != null) {
+        ListNode nextTemp = current.next; // запомнить следующий
+        current.next = prev;              // развернуть ссылку
+        prev = current;                   // сдвинуть prev
+        current = nextTemp;               // сдвинуть current
+    }
+    return prev;
+}
+===
+CATEGORY: Live Coding
+QUESTION:
+Реализовать Stack, используя две очереди (Queue).
+ANSWER:
+class MyStack {
+    Queue<Integer> q1 = new LinkedList<>();
+    Queue<Integer> q2 = new LinkedList<>();
+
+    // Push O(n) - дорогой
+    public void push(int x) {
+        q2.add(x);
+        while (!q1.isEmpty()) {
+            q2.add(q1.remove());
+        }
+        // q1 и q2 меняются местами
+        Queue<Integer> temp = q1;
+        q1 = q2;
+        q2 = temp;
+    }
+
+    // Pop O(1)
+    public int pop() { return q1.remove(); }
+}
+===
+CATEGORY: Live Coding
+QUESTION:
+Найти два числа в массиве, сумма которых равна целевому числу (Two Sum). O(n).
+ANSWER:
+public int[] twoSum(int[] nums, int target) {
+    Map<Integer, Integer> map = new HashMap<>();
+    for (int i = 0; i < nums.length; i++) {
+        int diff = target - nums[i];
+        if (map.containsKey(diff)) {
+            return new int[] { map.get(diff), i };
+        }
+        map.put(nums[i], i);
+    }
+    throw new IllegalArgumentException("No solution");
+}
+===
+CATEGORY: Live Coding
+QUESTION:
+Реализовать Binary Search (бинарный поиск) в отсортированном массиве.
+ANSWER:
+public int binarySearch(int[] arr, int target) {
+    int left = 0, right = arr.length - 1;
+    while (left <= right) {
+        int mid = left + (right - left) / 2; // защита от переполнения (l+r)
+        if (arr[mid] == target) return mid;
+        if (arr[mid] < target) left = mid + 1;
+        else right = mid - 1;
+    }
+    return -1;
+}
+===
+CATEGORY: Live Coding
+QUESTION:
+Проверить, является ли строка палиндромом (читается одинаково слева направо и справа налево).
+ANSWER:
+public boolean isPalindrome(String s) {
+    if (s == null) return false;
+    int left = 0;
+    int right = s.length() - 1;
+    while (left < right) {
+        if (s.charAt(left) != s.charAt(right)) return false;
+        left++;
+        right--;
+    }
+    return true;
+}
+// Вариант с StringBuilder: return s.equals(new StringBuilder(s).reverse().toString());
+===

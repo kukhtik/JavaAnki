@@ -1,0 +1,7 @@
+CATEGORY: Методологии
+QUESTION:
+Что такое CI/CD?
+ANSWER:
+CI (Continuous Integration): Частая интеграция кода в общий репозиторий с авто-сборкой и авто-тестами.
+CD (Continuous Delivery/Deployment): Автоматическая доставка кода на стейджинг или продакшн.
+===

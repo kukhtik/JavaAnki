@@ -1,0 +1,88 @@
+CATEGORY: Architecture
+QUESTION:
+Что такое ACID?
+ANSWER:
+Требования к транзакциям БД:
+A - Atomicity (Атомарность: всё или ничего).
+C - Consistency (Согласованность: данные валидны до и после).
+I - Isolation (Изоляция: транзакции не мешают друг другу).
+D - Durability (Надежность/Долговечность: данные сохранены на диске).
+===
+CATEGORY: Architecture
+QUESTION:
+CAP-теорема. О чем она?
+ANSWER:
+В распределенной системе невозможно одновременно гарантировать все три свойства:
+C - Consistency (Согласованность данных на всех узлах).
+A - Availability (Доступность: каждый запрос получает ответ).
+P - Partition Tolerance (Устойчивость к разделению сети).
+Можно выбрать только два (обычно CP или AP).
+===
+CATEGORY: Architecture
+QUESTION:
+Что такое N+1 проблема (в Hibernate/ORM)?
+ANSWER:
+Проблема производительности. Когда для получения списка из N сущностей выполняется 1 запрос (select all), а затем для каждой сущности выполняется еще 1 запрос для подгрузки связанных данных (ленивая загрузка).
+Итого: N+1 запрос. Решается через `JOIN FETCH`.
+===
+CATEGORY: Architecture
+QUESTION:
+Что такое Dependency Injection (DI) и Inversion of Control (IoC)?
+ANSWER:
+**IoC (Инверсия управления):** Принцип, когда не сам объект создает свои зависимости, а получает их извне (фреймворк управляет потоком).
+**DI (Внедрение зависимостей):** Реализация IoC. Зависимости передаются в объект (через конструктор, сеттер или поле).
+===
+CATEGORY: Architecture
+QUESTION:
+Что такое слоистая архитектура (Layered Architecture)?
+ANSWER:
+Разделение приложения на горизонтальные слои:
+1. Presentation (Controller) — прием запросов.
+2. Service (Business Logic) — бизнес-правила.
+3. Persistence (Repository/DAO) — работа с БД.
+===
+CATEGORY: Architecture
+QUESTION:
+Что такое REST?
+ANSWER:
+Архитектурный стиль взаимодействия систем по протоколу HTTP.
+Принципы: Stateless (нет состояния клиента на сервере), Cacheable, Uniform Interface (ресурсы и методы GET, POST, PUT, DELETE).
+===
+CATEGORY: Architecture
+QUESTION:
+Что такое DTO (Data Transfer Object)?
+ANSWER:
+Объект, используемый для передачи данных между слоями приложения или по сети. Не содержит бизнес-логики, только поля и геттеры/сеттеры.
+===
+CATEGORY: Architecture
+QUESTION:
+Что такое Bean Scope (в Spring)?
+ANSWER:
+Область видимости бина.
+Singleton (по умолчанию): один на контейнер.
+Prototype: новый при каждом запросе.
+Request/Session (в вебе): на HTTP запрос/сессию.
+===
+CATEGORY: Architecture
+QUESTION:
+Жизненный цикл бина в Spring (кратко).
+ANSWER:
+1. Создание экземпляра (Constructor).
+2. Внедрение зависимостей (Setter/Field Injection).
+3. PostConstruct (init-метод).
+4. Использование.
+5. PreDestroy (destroy-метод).
+===
+CATEGORY: Architecture
+QUESTION:
+Разница между Монолитом и Микросервисами.
+ANSWER:
+**Монолит:** Единая кодовая база, единый деплой, единая БД. Проще в начале, сложно масштабировать отдельные части.
+**Микросервисы:** Набор мелких независимых сервисов, общающихся по сети. Легко масштабировать, можно разные технологии, но сложнее в поддержке (распределенные транзакции, мониторинг).
+===
+CATEGORY: Architecture
+QUESTION:
+В чем разница между DTO и Entity?
+ANSWER:
+**Entity:** Объект, отражающий структуру таблицы в БД (JPA/Hibernate), имеет Identity (ID), используется в слое Persistence.
+**DTO (Data Transfer Object):** Простой объект для передачи данных между слоями или по сети. Не содержит логики, отвязан от БД. Используется в слое Presentation/Service.

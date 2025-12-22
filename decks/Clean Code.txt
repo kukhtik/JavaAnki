@@ -1,0 +1,8 @@
+CATEGORY: Clean Code
+QUESTION:
+Принципы DRY, KISS, YAGNI.
+ANSWER:
+DRY (Don't Repeat Yourself): Не дублируй логику.
+KISS (Keep It Simple, Stupid): Не усложняй без нужды.
+YAGNI (You Ain't Gonna Need It): Не пиши код "на будущее", пиши только то, что нужно сейчас.
+===
