@@ -1,5 +1,6 @@
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder; // Добавлено
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.io.File;
@@ -17,16 +18,16 @@ public class MainFrame extends JFrame {
     private boolean isShuffleMode = false;
     private boolean isAnswerRevealed = false;
 
-    // UI Components
+    // --- UI Элементы ---
+    private CustomTitleBar titleBar; // Ссылка на наш новый бар
     private JTextArea qArea, aArea, inputArea;
     private JLabel infoLabel, feedbackLabel;
     private JButton checkBtn, yesBtn, noBtn, modeBtn, themeBtn;
-    private JComboBox<String> topicSelector; // Выбор темы
+    private JComboBox<String> topicSelector;
     private JTabbedPane tabs;
 
-    // Панели вкладок
-    private JPanel studyPanel, statsPanel, historyPanel;
-    private JPanel buttonPanel; // Нижняя панель с кнопками ответа
+    // Панели
+    private JPanel studyPanel, statsPanel, historyPanel, buttonPanel;
 
     // Таблицы и Поиск
     private JTable globalStatsTable, categoryStatsTable, historyTable;
@@ -35,30 +36,45 @@ public class MainFrame extends JFrame {
     public MainFrame() {
         AppLogger.info("Запуск GUI MainFrame...");
 
+        // Настраиваем системные цвета
+        ThemeManager.updateUIManager();
+
+        // Инициализация логики
         deckManager = new DeckManager();
         historyManager = new HistoryManager();
 
+        // Построение интерфейса
         initUI();
 
+        // Подключение клавиатуры
         keyController = new KeyController(this);
         keyController.setupKeyBindings();
 
-        // Применяем тему при старте
+        // Первичная покраска и загрузка
         applyTheme();
-
         loadNextCard();
     }
 
     public boolean isAnswerRevealed() { return isAnswerRevealed; }
 
     private void initUI() {
+        // --- ИЗМЕНЕНИЯ ЗДЕСЬ ---
+        // 1. Убираем стандартную рамку
+        setUndecorated(true);
+
         setTitle("Java Anki: Master Edition");
         setSize(1100, 800);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        tabs = new JTabbedPane();
+        // Используем BorderLayout для главного окна
+        setLayout(new BorderLayout());
 
+        // 2. Добавляем кастомный заголовок наверх
+        titleBar = new CustomTitleBar(this);
+        add(titleBar, BorderLayout.NORTH);
+
+        tabs = new JTabbedPane();
         studyPanel = createStudyPanel();
         statsPanel = createStatsPanel();
         historyPanel = createHistoryPanel();
@@ -73,29 +89,31 @@ public class MainFrame extends JFrame {
             if (idx == 2) updateHistory("");
         });
 
-        add(tabs);
+        // 3. Табы добавляем в ЦЕНТР (под заголовком)
+        add(tabs, BorderLayout.CENTER);
     }
 
-    // --- 1. ПАНЕЛЬ ОБУЧЕНИЯ ---
+    // ==========================================
+    // 1. ПАНЕЛЬ ОБУЧЕНИЯ (STUDY PANEL)
+    // ==========================================
     private JPanel createStudyPanel() {
         JPanel mainPanel = new JPanel(new BorderLayout());
 
-        // TOP PANEL: Тема + Фильтр + Режим
+        // --- ВЕРХНЯЯ ПАНЕЛЬ ---
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
         themeBtn = new JButton("☀/☾");
-        themeBtn.setToolTipText("Сменить тему (Светлая/Темная)");
+        themeBtn.setToolTipText("Сменить тему оформления");
         themeBtn.addActionListener(e -> toggleTheme());
 
-        // Выбор темы
         topicSelector = new JComboBox<>();
-        setupTopicSelector(); // Заполнение данными
+        setupTopicSelector();
         topicSelector.addActionListener(e -> {
             String selected = (String) topicSelector.getSelectedItem();
             if (selected != null) {
                 deckManager.setCategoryFilter(selected);
                 loadNextCard();
-                this.requestFocusInWindow(); // Вернуть фокус для клавиш
+                this.requestFocusInWindow();
             }
         });
 
@@ -107,7 +125,6 @@ public class MainFrame extends JFrame {
         topPanel.add(topicSelector);
         topPanel.add(modeBtn);
 
-        // Info Label
         infoLabel = new JLabel("Загрузка...", SwingConstants.CENTER);
         infoLabel.setFont(new Font("Arial", Font.BOLD, 14));
         infoLabel.setBorder(new EmptyBorder(5,5,5,5));
@@ -119,7 +136,7 @@ public class MainFrame extends JFrame {
 
         mainPanel.add(northContainer, BorderLayout.NORTH);
 
-        // CENTER: Вопрос / Ответ
+        // --- ЦЕНТРАЛЬНАЯ ЧАСТЬ ---
         JPanel centerGrid = new JPanel(new GridLayout(3,1,5,5));
         centerGrid.setBorder(new EmptyBorder(10,10,10,10));
 
@@ -143,7 +160,7 @@ public class MainFrame extends JFrame {
 
         mainPanel.add(centerGrid, BorderLayout.CENTER);
 
-        // BOTTOM: Кнопки
+        // --- НИЖНЯЯ ПАНЕЛЬ ---
         buttonPanel = new JPanel();
         checkBtn = createButton("Проверить [Enter]", e -> checkAnswer());
         noBtn = createButton("ОШИБКА [←]", e -> submitResult(false));
@@ -157,25 +174,21 @@ public class MainFrame extends JFrame {
 
     private void setupTopicSelector() {
         String currentSelection = (String) topicSelector.getSelectedItem();
-
-        Vector<String> categories = new Vector<>();
-        categories.add("ВСЕ ТЕМЫ");
-        categories.addAll(deckManager.getCategories());
-
-        DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>(categories);
+        Vector<String> options = deckManager.getFilterOptions();
+        DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>(options);
         topicSelector.setModel(model);
-
-        if (currentSelection != null && categories.contains(currentSelection)) {
+        if (currentSelection != null && options.contains(currentSelection)) {
             topicSelector.setSelectedItem(currentSelection);
         } else {
             topicSelector.setSelectedIndex(0);
         }
     }
 
-    // --- 2. ПАНЕЛЬ СТАТИСТИКИ ---
+    // ==========================================
+    // 2. ПАНЕЛЬ СТАТИСТИКИ
+    // ==========================================
     private JPanel createStatsPanel() {
         JPanel p = new JPanel(new GridLayout(2, 1, 10, 10));
-        p.setOpaque(false);
         p.setBorder(new EmptyBorder(10,10,10,10));
 
         globalStatsTable = new JTable(new DefaultTableModel(new String[]{"Статус", "Описание", "Кол-во"}, 0));
@@ -184,11 +197,12 @@ public class MainFrame extends JFrame {
         categoryStatsTable = new JTable(new DefaultTableModel(new String[]{"Категория", "Всего", "Новые", "Ошибки", "В процессе", "Мастер"}, 0));
         categoryStatsTable.setRowHeight(25); categoryStatsTable.setFont(new Font("Arial", Font.PLAIN, 14));
 
-        JPanel p1 = new JPanel(new BorderLayout()); p1.add(new JScrollPane(globalStatsTable));
-        JPanel p2 = new JPanel(new BorderLayout()); p2.add(new JScrollPane(categoryStatsTable));
-
-        // Заголовки для таблиц
+        JPanel p1 = new JPanel(new BorderLayout());
+        p1.add(new JScrollPane(globalStatsTable));
         p1.setBorder(BorderFactory.createTitledBorder("Общая сводка"));
+
+        JPanel p2 = new JPanel(new BorderLayout());
+        p2.add(new JScrollPane(categoryStatsTable));
         p2.setBorder(BorderFactory.createTitledBorder("Детализация по темам"));
 
         p.add(p1); p.add(p2);
@@ -196,61 +210,44 @@ public class MainFrame extends JFrame {
         JPanel container = new JPanel(new BorderLayout());
         container.add(p, BorderLayout.CENTER);
 
-        // Кнопки управления
         JPanel bottomBtnPanel = new JPanel();
-
         JButton refreshBtn = new JButton("Обновить статистику");
         refreshBtn.addActionListener(e -> updateStats());
-
         JButton importBtn = new JButton("Импорт из import.txt");
-        importBtn.addActionListener(e -> {
-            File importFile = new File("import.txt");
-            if(importFile.exists()) {
-                Set<String> existing = deckManager.getExistingNormalizedQuestions();
-                new DeckDistributor().distribute(importFile, existing);
-
-                JOptionPane.showMessageDialog(this, "Импорт завершен!");
-
-                // Перезагрузка всего
-                deckManager = new DeckManager();
-                setupTopicSelector(); // Обновляем список тем
-                loadNextCard();
-                updateStats();
-            } else {
-                JOptionPane.showMessageDialog(this, "Файл import.txt не найден.", "Ошибка", JOptionPane.ERROR_MESSAGE);
-            }
-        });
+        importBtn.addActionListener(e -> performImport());
 
         bottomBtnPanel.add(refreshBtn);
         bottomBtnPanel.add(importBtn);
-
         container.add(bottomBtnPanel, BorderLayout.SOUTH);
 
         return container;
     }
 
-    // --- 3. ПАНЕЛЬ ИСТОРИИ ---
+    // ==========================================
+    // 3. ПАНЕЛЬ ИСТОРИИ
+    // ==========================================
     private JPanel createHistoryPanel() {
         JPanel p = new JPanel(new BorderLayout());
         p.setBorder(new EmptyBorder(10,10,10,10));
 
-        // Поиск
         JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
         searchPanel.add(new JLabel("Поиск: "), BorderLayout.WEST);
+
         historySearchField = new JTextField();
         historySearchField.addActionListener(e -> updateHistory(historySearchField.getText()));
         searchPanel.add(historySearchField, BorderLayout.CENTER);
+
         JButton searchBtn = new JButton("Найти");
         searchBtn.addActionListener(e -> updateHistory(historySearchField.getText()));
         searchPanel.add(searchBtn, BorderLayout.EAST);
 
         p.add(searchPanel, BorderLayout.NORTH);
 
-        // Таблица
         String[] columns = {"Дата", "Вопрос", "Ваш Ответ", "Результат"};
         historyTable = new JTable(new DefaultTableModel(columns, 0));
         historyTable.setRowHeight(25);
         historyTable.setFont(new Font("Arial", Font.PLAIN, 12));
+
         historyTable.getColumnModel().getColumn(0).setPreferredWidth(130);
         historyTable.getColumnModel().getColumn(0).setMaxWidth(130);
         historyTable.getColumnModel().getColumn(3).setPreferredWidth(80);
@@ -258,71 +255,101 @@ public class MainFrame extends JFrame {
 
         p.add(new JScrollPane(historyTable), BorderLayout.CENTER);
 
-        JButton refreshBtn = new JButton("Сбросить фильтр");
-        refreshBtn.addActionListener(e -> {
+        JButton resetBtn = new JButton("Сбросить фильтр / Обновить");
+        resetBtn.addActionListener(e -> {
             historySearchField.setText("");
             updateHistory("");
         });
-        p.add(refreshBtn, BorderLayout.SOUTH);
+        p.add(resetBtn, BorderLayout.SOUTH);
 
         return p;
     }
 
-    // --- ТЕМЫ (ThemeManager) ---
+    // ==========================================
+    // ЛОГИКА
+    // ==========================================
 
     private void toggleTheme() {
         ThemeManager.toggle();
+        ThemeManager.updateUIManager();
         applyTheme();
     }
 
     private void applyTheme() {
-        Color bg = ThemeManager.getBackground();
-        Color panel = ThemeManager.getPanelBackground();
-        Color text = ThemeManager.getText();
-        Color input = ThemeManager.getInputBackground();
+        // 1. Рекурсивно красим все компоненты
+        ThemeManager.applyRecursive(this);
 
-        getContentPane().setBackground(bg);
+        // 2. Дополнительно обновляем TitleBar (чтобы кнопки перекрасились)
+        if (titleBar != null) {
+            titleBar.updateThemeColors();
+        }
 
-        // Вкладки
-        studyPanel.setBackground(panel);
-        statsPanel.setBackground(panel);
-        historyPanel.setBackground(panel);
-        buttonPanel.setBackground(panel);
+        // 3. Рисуем рамку вокруг всего окна (т.к. системной рамки нет)
+        // Если тема темная - рамка темно-серая, если светлая - серая
+        this.getRootPane().setBorder(new LineBorder(ThemeManager.getBorderColor(), 1));
 
-        // Компоненты
-        qArea.setBackground(ThemeManager.getAreaBackground());
-        qArea.setForeground(text);
+        // 4. Специфичная настройка текстовых полей
+        Color txt = ThemeManager.getText();
+        Color inputBg = ThemeManager.getInputBackground();
 
-        aArea.setBackground(ThemeManager.getAreaBackground());
-        aArea.setForeground(text);
+        if (qArea != null) {
+            qArea.setBackground(ThemeManager.isDark() ? new Color(50, 50, 50) : new Color(245, 250, 255));
+            qArea.setForeground(txt);
+        }
+        if (aArea != null) {
+            aArea.setBackground(ThemeManager.isDark() ? new Color(50, 50, 50) : new Color(230, 255, 230));
+            aArea.setForeground(txt);
+        }
+        if (inputArea != null) {
+            inputArea.setBackground(inputBg);
+            inputArea.setForeground(txt);
+            inputArea.setCaretColor(txt);
+        }
+        if (infoLabel != null) infoLabel.setForeground(Color.BLACK);
 
-        inputArea.setBackground(input);
-        inputArea.setForeground(text);
-        inputArea.setCaretColor(text);
-
-        // Таблицы
-        updateTableTheme(globalStatsTable);
-        updateTableTheme(categoryStatsTable);
-        updateTableTheme(historyTable);
-
-        // Info Label
-        infoLabel.setForeground(Color.BLACK); // Всегда черный, так как фон цветной
-
-        SwingUtilities.updateComponentTreeUI(this);
+        //SwingUtilities.updateComponentTreeUI(this);
     }
 
-    private void updateTableTheme(JTable table) {
-        if(table == null) return;
-        table.setBackground(ThemeManager.getInputBackground());
-        table.setForeground(ThemeManager.getText());
-        table.getTableHeader().setBackground(ThemeManager.getPanelBackground());
-        table.getTableHeader().setForeground(ThemeManager.getText());
-        if(table.getParent() instanceof JViewport) {
-            ((JViewport)table.getParent()).setBackground(ThemeManager.getPanelBackground());
+    private void performImport() {
+        File importFile = new File("import.txt");
+        if(importFile.exists()) {
+            Set<String> existing = deckManager.getExistingNormalizedQuestions();
+            new DeckDistributor().distribute(importFile, existing);
+            JDialog dialog = new JDialog(this, "Сообщение", true);
+            dialog.setUndecorated(true); // Убираем белый заголовок системы
+
+            JPanel content = new JPanel(new BorderLayout());
+            content.setBorder(new LineBorder(ThemeManager.getBorderColor(), 1));
+
+            JLabel msg = new JLabel("Импорт завершен! Дубликаты пропущены.", SwingConstants.CENTER);
+            msg.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+            JButton okBtn = new JButton("OK");
+            okBtn.addActionListener(e -> dialog.dispose());
+            JPanel btnPanel = new JPanel();
+            btnPanel.add(okBtn);
+            btnPanel.setBorder(new EmptyBorder(0,0,10,0));
+
+            content.add(msg, BorderLayout.CENTER);
+            content.add(btnPanel, BorderLayout.SOUTH);
+
+            dialog.add(content);
+            dialog.pack();
+            dialog.setLocationRelativeTo(this);
+
+            // Красим наш диалог
+            ThemeManager.applyRecursive(dialog);
+
+            dialog.setVisible(true);
+            deckManager = new DeckManager();
+            setupTopicSelector();
+            loadNextCard();
+            updateStats();
+            applyTheme();
+        } else {
+            JOptionPane.showMessageDialog(this, "Файл import.txt не найден.", "Ошибка", JOptionPane.ERROR_MESSAGE);
         }
     }
-
-    // --- ЛОГИКА ---
 
     public void toggleMode() {
         isShuffleMode = !isShuffleMode;
@@ -336,11 +363,14 @@ public class MainFrame extends JFrame {
 
         buttonPanel.removeAll();
         buttonPanel.add(checkBtn);
-
-        inputArea.setText(""); inputArea.setEditable(true);
+        ThemeManager.applyRecursive(buttonPanel);
+        inputArea.setText("");
+        inputArea.setEditable(true);
         inputArea.setBackground(ThemeManager.getInputBackground());
 
-        aArea.setText(""); aArea.setVisible(false); feedbackLabel.setText(" ");
+        aArea.setText("");
+        aArea.setVisible(false);
+        feedbackLabel.setText(" ");
 
         if(currentCard == null) {
             infoLabel.setText("В этой теме нет вопросов или они закончились.");
@@ -353,19 +383,20 @@ public class MainFrame extends JFrame {
             String statusText;
 
             if (currentCard.isNew) {
-                c = new Color(150, 200, 255); statusText = "НОВОЕ";
+                c = new Color(24, 98, 181); statusText = "НОВОЕ";
             } else if (currentCard.level == 0) {
-                c = new Color(255, 150, 150); statusText = "ОШИБКА";
+                c = new Color(166, 3, 3); statusText = "ОШИБКА";
             } else if (currentCard.level < 5) {
-                c = new Color(255, 220, 150); statusText = "УЧУ (" + currentCard.level + ")";
+                c = new Color(218, 147, 13); statusText = "УЧУ (" + currentCard.level + ")";
             } else {
-                c = new Color(150, 255, 150); statusText = "МАСТЕР (" + currentCard.level + ")";
+                c = new Color(7, 117, 7); statusText = "МАСТЕР (" + currentCard.level + ")";
             }
 
             String prefix = isShuffleMode ? "[SHUFFLE] " : "[SMART] ";
             infoLabel.setText(String.format("%s [%s] %s", prefix, currentCard.category, statusText));
             infoLabel.setBackground(c);
             infoLabel.setForeground(Color.BLACK);
+
             qArea.setText(currentCard.question);
             inputArea.requestFocusInWindow();
         }
@@ -376,21 +407,25 @@ public class MainFrame extends JFrame {
         if(currentCard == null) return;
         isAnswerRevealed = true;
 
-        double similarity = SmartChecker.check(inputArea.getText(), currentCard.answer);
+        String userAns = inputArea.getText();
+        double similarity = SmartChecker.check(userAns, currentCard.answer);
         boolean passed = similarity > 65.0;
 
-        aArea.setText(currentCard.answer); aArea.setVisible(true); inputArea.setEditable(false);
+        aArea.setText(currentCard.answer);
+        aArea.setVisible(true);
+        inputArea.setEditable(false);
+
         feedbackLabel.setText((passed ? "Отлично!" : "Неточно") + " (" + (int)similarity + "%)");
         feedbackLabel.setForeground(passed ? ThemeManager.getSuccessColor() : ThemeManager.getErrorColor());
 
-        // Подсветка
-        Color successBg = ThemeManager.isDark() ? new Color(30, 60, 30) : new Color(220, 255, 220);
-        Color errorBg = ThemeManager.isDark() ? new Color(60, 30, 30) : new Color(255, 220, 220);
+        Color successBg = ThemeManager.isDark() ? new Color(40, 80, 40) : new Color(220, 255, 220);
+        Color errorBg = ThemeManager.isDark() ? new Color(80, 40, 40) : new Color(255, 220, 220);
         inputArea.setBackground(passed ? successBg : errorBg);
 
         buttonPanel.removeAll();
         buttonPanel.add(noBtn);
         buttonPanel.add(yesBtn);
+        ThemeManager.applyRecursive(buttonPanel);
         (passed ? yesBtn : noBtn).requestFocusInWindow();
         buttonPanel.revalidate(); buttonPanel.repaint();
     }
@@ -401,10 +436,10 @@ public class MainFrame extends JFrame {
         loadNextCard();
     }
 
-    // --- ОБНОВЛЕНИЕ ТАБЛИЦ ---
-
     private void updateStats() {
-        DefaultTableModel gm = (DefaultTableModel) globalStatsTable.getModel(); gm.setRowCount(0);
+        DefaultTableModel gm = (DefaultTableModel) globalStatsTable.getModel();
+        gm.setRowCount(0);
+
         List<Card> all = deckManager.getAllCards();
         if (all == null) return;
 
@@ -417,9 +452,10 @@ public class MainFrame extends JFrame {
         gm.addRow(new Object[]{"ОШИБКИ", "Нужно повторить (Level 0)", cntErr});
         gm.addRow(new Object[]{"В ПРОЦЕССЕ", "Учу / Закрепляю (Level 1-7)", cntMid});
         gm.addRow(new Object[]{"МАСТЕР", "Отлично знаю (Level 8+)", cntHigh});
-        gm.addRow(new Object[]{"ИТОГО", "", all.size()});
+        gm.addRow(new Object[]{"ИТОГО", "Всего карточек", all.size()});
 
-        DefaultTableModel cm = (DefaultTableModel) categoryStatsTable.getModel(); cm.setRowCount(0);
+        DefaultTableModel cm = (DefaultTableModel) categoryStatsTable.getModel();
+        cm.setRowCount(0);
         Map<String, List<Card>> catStats = deckManager.getCardsByCategory();
 
         for(String cat : catStats.keySet()) {
@@ -431,6 +467,7 @@ public class MainFrame extends JFrame {
             long h = list.stream().filter(c -> !c.isNew && c.level >= 8).count();
             cm.addRow(new Object[]{cat, t, n, e, m, h});
         }
+        applyTheme();
     }
 
     private void updateHistory(String filter) {
@@ -445,21 +482,26 @@ public class MainFrame extends JFrame {
                     entry.userAnswer.toLowerCase().contains(searchLower) ||
                     entry.result.toLowerCase().contains(searchLower) ||
                     entry.date.contains(searchLower);
-
             if (matches) {
                 model.addRow(new Object[]{entry.date, entry.question, entry.userAnswer, entry.result});
             }
         }
+        applyTheme();
     }
 
     private JTextArea createArea(int size, boolean editable) {
         JTextArea t = new JTextArea();
         t.setFont(new Font("Arial", Font.PLAIN, size));
-        t.setEditable(editable); t.setLineWrap(true); t.setWrapStyleWord(true);
+        t.setEditable(editable);
+        t.setLineWrap(true);
+        t.setWrapStyleWord(true);
         return t;
     }
 
     private JButton createButton(String txt, java.awt.event.ActionListener l) {
-        JButton b = new JButton(txt); b.addActionListener(l); b.setPreferredSize(new Dimension(220,45)); return b;
+        JButton b = new JButton(txt);
+        b.addActionListener(l);
+        b.setPreferredSize(new Dimension(220,45));
+        return b;
     }
 }
