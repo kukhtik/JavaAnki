@@ -1,8 +1,8 @@
 package data.repository;
 
 import data.FileService;
+import data.parser.TxtDeckParser; // Новый импорт
 import model.Card;
-import util.CardParser; // Используем наш парсер
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -16,10 +16,12 @@ public class FileDeckRepository implements CardRepository {
     private static final Logger LOGGER = Logger.getLogger(FileDeckRepository.class.getName());
     private static final String DECKS_DIR = "decks";
     private final FileService fileService;
+    private final TxtDeckParser parser; // Внедряем парсер
 
     public FileDeckRepository() {
         this.fileService = new FileService();
         this.fileService.ensureDirectory(Paths.get(DECKS_DIR));
+        this.parser = new TxtDeckParser(); // Создаем экземпляр парсера
     }
 
     @Override
@@ -34,11 +36,12 @@ public class FileDeckRepository implements CardRepository {
                     .toList();
 
             for (Path path : fileList) {
-                // ДЕЛЕГИРУЕМ ПАРСИНГ
+                // 1. Читаем файл
                 List<String> lines = fileService.readAllLines(path);
                 String fileName = path.getFileName().toString();
 
-                List<Card> cardsFromFile = CardParser.parseAll(lines, fileName);
+                // 2. ДЕЛЕГИРУЕМ ПАРСИНГ
+                List<Card> cardsFromFile = parser.parse(lines, fileName); // Используем TxtDeckParser
                 allCards.addAll(cardsFromFile);
             }
             return allCards;
