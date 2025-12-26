@@ -5,71 +5,91 @@ import util.TextUtil;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.Files;
 import java.util.*;
+import java.util.logging.Logger;
 
 public class ImportService {
+    private static final Logger LOGGER = Logger.getLogger(ImportService.class.getName());
     private static final String IMPORT_FILE = "import.txt";
     private static final String DECKS_DIR = "decks";
 
     private final FileService fileService = new FileService();
-    private final StudyService studyService; // Нужно, чтобы проверить дубликаты
+    private final StudyService studyService;
 
     public ImportService(StudyService studyService) {
         this.studyService = studyService;
     }
 
     public String performImport() {
+        // 1. Сначала перезагружаем состояние с диска!
+        // Если вы удалили файлы вручную, программа должна об этом узнать ДО проверки дубликатов.
+        studyService.reloadSession();
+
         Path importPath = Paths.get(IMPORT_FILE);
+        if (!Files.exists(importPath)) return "Файл import.txt не найден.";
+
         List<String> lines = fileService.readAllLines(importPath);
+        if (lines.isEmpty()) return "Файл import.txt пуст.";
 
-        if (lines.isEmpty()) return "Файл import.txt не найден или пуст.";
-
+        // Загружаем актуальные ID (после перезагрузки)
         Set<String> existingQuestions = new HashSet<>();
-        // Загружаем хэши существующих вопросов, чтобы не создавать дубли
         studyService.getAllCards().forEach(c ->
-                existingQuestions.add(TextUtil.normalizedForId(c.getQuestion()))
+                existingQuestions.add(TextUtil.normalizeForId(c.getQuestion()))
         );
 
-        List<String> buffer = new ArrayList<>();
-        List<String> failedBlocks = new ArrayList<>();
+        List<String> linesToKeep = new ArrayList<>();
+        List<String> currentBlock = new ArrayList<>();
 
         int added = 0;
         int skipped = 0;
+        int errors = 0;
 
         for (String line : lines) {
-            String trimmed = line.trim();
-            if (trimmed.equals("===")) {
-                if (!buffer.isEmpty()) {
-                    if (processBlock(buffer, existingQuestions)) added++;
-                    else skipped++; // Либо дубль, либо ошибка
+            String tr = line.trim();
+            if (tr.equals("===")) {
+                if (!currentBlock.isEmpty()) {
+                    int res = processBlock(currentBlock, existingQuestions);
+                    if (res == 1) added++;
+                    else if (res == 2) skipped++;
+                    else {
+                        linesToKeep.addAll(currentBlock);
+                        linesToKeep.add("===");
+                        errors++;
+                    }
                 }
-                buffer.clear();
+                currentBlock.clear();
             } else {
-                buffer.add(line); // Сохраняем оригинальные отступы
+                currentBlock.add(line);
             }
         }
-        // Хвост файла
-        if (!buffer.isEmpty()) {
-            if (processBlock(buffer, existingQuestions)) added++;
-            else skipped++;
+        if (!currentBlock.isEmpty()) {
+            if (currentBlock.stream().anyMatch(s -> !s.trim().isEmpty())) {
+                linesToKeep.addAll(currentBlock);
+                errors++;
+            }
         }
 
-        // Очищаем файл import.txt (или оставляем ошибки, но для простоты очистим, если успех)
         fileService.ensureDirectory(Paths.get(DECKS_DIR));
 
-        // В реальном проекте тут лучше переписать import.txt, оставив только ошибочные блоки.
-        // Здесь мы просто очистим файл, считая, что пользователь поправит исходник.
         try {
-            java.nio.file.Files.write(importPath, new byte[0]);
-        } catch (Exception e) { return "Ошибка очистки import.txt"; }
+            if (linesToKeep.isEmpty()) {
+                Files.write(importPath, new byte[0], StandardOpenOption.TRUNCATE_EXISTING);
+            } else {
+                Files.write(importPath, linesToKeep, java.nio.charset.StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+            }
+        } catch (Exception e) {
+            LOGGER.severe("Ошибка обновления import.txt: " + e.getMessage());
+        }
 
-        // Обновляем данные в приложении
+        // Обновляем еще раз, чтобы новые карты появились в обучении
         studyService.reloadSession();
 
-        return String.format("Импорт завершен.\nДобавлено: %d\nПропущено (дубликаты): %d", added, skipped);
+        return String.format("Импорт завершен.\nДобавлено: %d\nПропущено (дубликаты): %d\nОшибок (осталось в файле): %d", added, skipped, errors);
     }
 
-    private boolean processBlock(List<String> buffer, Set<String> existing) {
+    private int processBlock(List<String> buffer, Set<String> existing) {
         String cat = null, q = null, a = null;
         StringBuilder qB = new StringBuilder();
         StringBuilder aB = new StringBuilder();
@@ -85,23 +105,21 @@ public class ImportService {
                 if (state == 2) aB.append(line).append("\n");
             }
         }
-        q = qB.toString().trim();
-        a = aB.toString().trim();
+        if (qB.length() > 0) q = qB.toString().trim();
+        if (aB.length() > 0) a = aB.toString().trim();
 
-        if (cat == null || q.isEmpty() || a.isEmpty()) return false;
+        if (cat == null || q == null || q.isEmpty() || a == null || a.isEmpty()) return 0;
 
-        // Проверка на дубликат
-        String id = TextUtil.normalizedForId(q);
-        if (existing.contains(id)) return false;
+        String id = TextUtil.normalizeForId(q);
+        if (existing.contains(id)) return 2;
 
-        // Запись в файл колоды
         String safeName = cat.replaceAll("[^a-zA-Z0-9а-яА-Я ._-]", "");
         Path deckPath = Paths.get(DECKS_DIR, safeName + ".txt");
 
         String entry = String.format("CATEGORY: %s%nQUESTION:%n%s%nANSWER:%n%s%n===%n", cat, q, a);
         fileService.appendLine(deckPath, entry);
 
-        existing.add(id); // Добавляем в локальный кэш, чтобы не дублировать внутри одного импорта
-        return true;
+        existing.add(id);
+        return 1;
     }
 }

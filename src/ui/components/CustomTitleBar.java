@@ -7,8 +7,10 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.util.logging.Logger;
 
 public class CustomTitleBar extends JPanel {
+    private static final Logger LOGGER = Logger.getLogger(CustomTitleBar.class.getName());
     private final JFrame parent;
     private Point initialClick;
 
@@ -29,21 +31,22 @@ public class CustomTitleBar extends JPanel {
         var buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         buttonPanel.setOpaque(false);
 
-        // Кнопка Темы
+        // Кнопка Темы (Сделали шире: 80px)
         var themeBtn = createBarButton("Theme", e -> {
             Theme.toggle();
             Theme.apply(parent);
             parent.repaint();
+            LOGGER.info("Тема переключена: " + (Theme.isDark() ? "Dark" : "Light"));
         });
-        themeBtn.setPreferredSize(new Dimension(60, 35));
+        themeBtn.setPreferredSize(new Dimension(80, 35));
 
-        // Кнопка Свернуть (используем нижнее подчеркивание)
         var minBtn = createBarButton("_", e -> parent.setState(Frame.ICONIFIED));
 
-        // Кнопка Закрыть (обычный X)
-        var closeBtn = createBarButton("X", e -> System.exit(0));
+        var closeBtn = createBarButton("X", e -> {
+            LOGGER.info("Приложение закрыто через CustomTitleBar");
+            System.exit(0);
+        });
 
-        // Красный цвет при наведении на закрытие
         closeBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -64,7 +67,6 @@ public class CustomTitleBar extends JPanel {
         buttonPanel.add(closeBtn);
         add(buttonPanel, BorderLayout.EAST);
 
-        // Чтобы фон панели соответствовал теме при старте
         setBackground(Theme.getPanel());
     }
 
@@ -74,7 +76,7 @@ public class CustomTitleBar extends JPanel {
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
         btn.setContentAreaFilled(false);
-        btn.setOpaque(false); // Прозрачный по умолчанию
+        btn.setOpaque(false);
         btn.setFont(new Font("SansSerif", Font.BOLD, 12));
         btn.setForeground(Theme.getText());
         btn.addActionListener(action);

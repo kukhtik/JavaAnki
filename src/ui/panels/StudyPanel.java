@@ -8,8 +8,10 @@ import ui.components.UIFactory;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.util.logging.Logger;
 
 public class StudyPanel extends JPanel {
+    private static final Logger LOGGER = Logger.getLogger(StudyPanel.class.getName());
     private final StudyService service;
 
     private JComboBox<String> categoryBox;
@@ -27,52 +29,43 @@ public class StudyPanel extends JPanel {
         initUI();
         setupKeys();
 
-        // Загружаем первую карту явно в конце конструктора
+        LOGGER.info("Панель обучения инициализирована. Горячие клавиши (Enter/Arrows) активны.");
         loadNextCard();
     }
 
+    // --- ОСТАЛЬНОЙ КОД БЕЗ ИЗМЕНЕНИЙ ДО setupKeys ---
     private void initUI() {
-        // --- ВЕРХ: Настройки ---
         JPanel topContainer = new JPanel(new BorderLayout());
         JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
-
-        // 1. Создаем комбобокс, но СЛУШАТЕЛЬ пока НЕ добавляем!
         categoryBox = new JComboBox<>();
-        categoryBox.setPreferredSize(new Dimension(200, 30));
-
+        categoryBox.setPreferredSize(new Dimension(250, 30));
         JButton modeBtn = UIFactory.createButton("Mode: SMART", null);
-        modeBtn.setPreferredSize(new Dimension(120, 30));
+        modeBtn.setPreferredSize(new Dimension(160, 30));
         modeBtn.addActionListener(e -> {
             isShuffleMode = !isShuffleMode;
             modeBtn.setText(isShuffleMode ? "Mode: SHUFFLE" : "Mode: SMART");
+            LOGGER.info("Смена режима -> " + modeBtn.getText());
             loadNextCard();
         });
-
         controls.add(new JLabel("Тема: "));
         controls.add(categoryBox);
         controls.add(modeBtn);
-
         infoLabel = new JLabel("...", SwingConstants.CENTER);
         infoLabel.setOpaque(true);
         infoLabel.setBorder(BorderFactory.createEmptyBorder(4,4,4,4));
-
         topContainer.add(controls, BorderLayout.NORTH);
         topContainer.add(infoLabel, BorderLayout.SOUTH);
         add(topContainer, BorderLayout.NORTH);
 
-        // --- ЦЕНТР ---
         JPanel centerPanel = new JPanel(new GridLayout(3, 1, 10, 10));
         centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
         questionArea = UIFactory.createArea(false);
         centerPanel.add(new JScrollPane(questionArea));
-
         JPanel inputContainer = new JPanel(new BorderLayout());
         inputContainer.add(UIFactory.createLabel("Ваш ответ:"), BorderLayout.NORTH);
         inputArea = UIFactory.createArea(true);
         inputContainer.add(new JScrollPane(inputArea), BorderLayout.CENTER);
         centerPanel.add(inputContainer);
-
         JPanel answerContainer = new JPanel(new BorderLayout());
         feedbackLabel = UIFactory.createLabel(" ");
         answerContainer.add(feedbackLabel, BorderLayout.NORTH);
@@ -82,17 +75,13 @@ public class StudyPanel extends JPanel {
         centerPanel.add(answerContainer);
         add(centerPanel, BorderLayout.CENTER);
 
-        // --- НИЗ (Инициализируем buttonPanel) ---
         buttonPanel = new JPanel(new FlowLayout());
         checkBtn = UIFactory.createButton("Проверить [Enter]", e -> checkAnswer());
         yesBtn = UIFactory.createButton("ВЕРНО [→]", e -> submit(true));
         noBtn = UIFactory.createButton("ОШИБКА [←]", e -> submit(false));
         add(buttonPanel, BorderLayout.SOUTH);
 
-        // === FIX START: Настройка слушателей в самом конце ===
-        // Теперь buttonPanel и inputArea точно существуют, можно включать логику
         updateCategories();
-
         categoryBox.addActionListener(e -> {
             String cat = (String) categoryBox.getSelectedItem();
             if (cat != null) {
@@ -101,7 +90,6 @@ public class StudyPanel extends JPanel {
                 inputArea.requestFocusInWindow();
             }
         });
-        // === FIX END ===
     }
 
     private void updateCategories() {
@@ -119,21 +107,30 @@ public class StudyPanel extends JPanel {
         im.put(KeyStroke.getKeyStroke("ENTER"), "enter");
         am.put("enter", new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
-                if (!isAnswerRevealed) checkAnswer();
+                if (!isAnswerRevealed) {
+                    LOGGER.info("KEY: Enter pressed (Check)");
+                    checkAnswer();
+                }
             }
         });
 
         im.put(KeyStroke.getKeyStroke("RIGHT"), "right");
         am.put("right", new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
-                if (isAnswerRevealed) submit(true);
+                if (isAnswerRevealed) {
+                    LOGGER.info("KEY: Right Arrow pressed (Submit Correct)");
+                    submit(true);
+                }
             }
         });
 
         im.put(KeyStroke.getKeyStroke("LEFT"), "left");
         am.put("left", new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
-                if (isAnswerRevealed) submit(false);
+                if (isAnswerRevealed) {
+                    LOGGER.info("KEY: Left Arrow pressed (Submit Error)");
+                    submit(false);
+                }
             }
         });
     }
@@ -141,20 +138,16 @@ public class StudyPanel extends JPanel {
     private void loadNextCard() {
         isAnswerRevealed = false;
         Card card = service.nextCard(isShuffleMode);
-
-        // Здесь раньше падала ошибка, теперь buttonPanel гарантированно инициализирована
         buttonPanel.removeAll();
         buttonPanel.add(checkBtn);
-
         inputArea.setText("");
         inputArea.setEditable(true);
         inputArea.setBackground(Theme.getInputBg());
-
         answerArea.setVisible(false);
         feedbackLabel.setText(" ");
 
         if (card == null) {
-            questionArea.setText("Нет карт в этой категории.");
+            questionArea.setText("Нет карт.");
             checkBtn.setEnabled(false);
             infoLabel.setText("Пусто");
             infoLabel.setBackground(Color.GRAY);
@@ -164,7 +157,6 @@ public class StudyPanel extends JPanel {
 
         checkBtn.setEnabled(true);
         questionArea.setText(card.getQuestion());
-
         String status = card.isNew() ? "НОВОЕ" : "LVL " + card.getLevel();
         infoLabel.setText(String.format("[%s] %s", card.getCategory(), status));
 
@@ -183,10 +175,8 @@ public class StudyPanel extends JPanel {
     private void checkAnswer() {
         if (service.getCurrentCard() == null) return;
         isAnswerRevealed = true;
-
         String user = inputArea.getText();
         var res = service.checkAnswer(user);
-
         answerArea.setText(service.getCurrentCard().getAnswer());
         answerArea.setVisible(true);
         inputArea.setEditable(false);
@@ -196,9 +186,7 @@ public class StudyPanel extends JPanel {
         } else {
             inputArea.setBackground(res.isPassed() ? new Color(200, 255, 200) : new Color(255, 200, 200));
         }
-
         feedbackLabel.setText(res.isPassed() ? "OK" : "TYPO / ОШИБКА");
-
         buttonPanel.removeAll();
         buttonPanel.add(noBtn);
         buttonPanel.add(yesBtn);
