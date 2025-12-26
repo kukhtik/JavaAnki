@@ -2,6 +2,7 @@ package app;
 
 import data.repository.*;
 import service.StudyService;
+import service.session.SessionManager; // NEW
 import ui.MainFrame;
 import ui.Theme;
 
@@ -18,21 +19,20 @@ public class App {
                 Theme.setupGlobal();
             } catch (Exception ignored) {}
 
-            LOGGER.info("=== ЗАПУСК ПРИЛОЖЕНИЯ (Сборка зависимостей) ===");
+            LOGGER.info("=== ЗАПУСК ПРИЛОЖЕНИЯ ===");
 
-            // 1. Создаем конкретные реализации репозиториев (Работа с файлами)
+            // 1. Repositories
             CardRepository cardRepo = new FileDeckRepository();
             StatsRepository statsRepo = new FileStatsRepository();
             HistoryRepository historyRepo = new HistoryRepository();
             GroupRepository groupRepo = new GroupRepository();
 
-            // 2. Внедряем зависимости в Сервис (Dependency Injection)
-            // Сервис не знает, что мы используем файлы. Ему дали интерфейсы.
-            StudyService studyService = new StudyService(cardRepo, statsRepo, historyRepo, groupRepo);
+            // 2. Session Manager (Core Logic)
+            SessionManager sessionManager = new SessionManager(cardRepo, statsRepo, historyRepo, groupRepo);
 
-            LOGGER.info("Сервис собран. Карт: " + studyService.getAllCards().size());
+            // 3. Facade Service
+            StudyService studyService = new StudyService(sessionManager);
 
-            // 3. Запускаем UI
             new MainFrame(studyService).setVisible(true);
         });
     }
