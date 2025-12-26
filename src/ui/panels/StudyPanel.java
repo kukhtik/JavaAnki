@@ -7,110 +7,136 @@ import ui.components.UIFactory;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 
-/**
- * Панель обучения, отвечающая за отображение вопроса,
- * ввод ответа пользователем, показ правильного ответа и визуальную
- * обратную связь
- * <ul>
- *     <li>запрашивает следующую карточку у сервиса</li>
- *     <li>отображает вопрос</li>
- *     <li>принимает ответ пользователя</li>
- *     <li>показывает правильный ответ и результат проверки</li>
- *     <li>позволяет подтвердить результат (верно/ошибка)</li>
- * </ul>
- */
 public class StudyPanel extends JPanel {
     private final StudyService service;
 
-    private JTextArea questionArea;
-    private JTextArea answerArea;
-    private JTextArea inputArea;
-    private JLabel infoLabel;
-    private JLabel feedbackLabel;
+    private JComboBox<String> categoryBox; // NEW: Выбор темы
+    private JTextArea questionArea, answerArea, inputArea;
+    private JLabel infoLabel, feedbackLabel;
     private JPanel buttonPanel;
-    private JButton checkBtn;
-    private JButton yesBtn;
-    private JButton noBtn;
+    private JButton checkBtn, yesBtn, noBtn;
 
-    /** Режим выбора карточек: случайный или умный */
     private boolean isShuffleMode = false;
+    private boolean isAnswerRevealed = false; // Нужно для логики клавиш
 
-    /**
-     * Создаёт панель обучения и сразу загружает первую карточку
-     *
-     * @param service сервис обучения
-     */
     public StudyPanel(StudyService service) {
         this.service = service;
         setLayout(new BorderLayout());
-
         initUI();
+        setupKeys(); // NEW: Горячие клавиши
         loadNextCard();
     }
 
-    /**
-     * Инициализирует все UI-компоненты панели:
-     * <ul>
-     *     <li>область вопроса</li>
-     *     <li>поле ввода ответа</li>
-     *     <li>область правильного ответа</li>
-     *     <li>кнопки управления</li>
-     *     <li>строку состояния</li>
-     * </ul>
-     */
     private void initUI() {
-        // ЦЕНТР: вопрос, ввод, ответ
+        // --- ВЕРХ: Настройки ---
+        JPanel topContainer = new JPanel(new BorderLayout());
+
+        // Панель управления (Тема, Режим)
+        JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
+
+        // Селектор категорий
+        categoryBox = new JComboBox<>();
+        categoryBox.addActionListener(e -> {
+            String cat = (String) categoryBox.getSelectedItem();
+            if (cat != null) {
+                service.setFilter(cat);
+                loadNextCard();
+                inputArea.requestFocusInWindow();
+            }
+        });
+        updateCategories(); // Заполнить список
+
+        JButton modeBtn = UIFactory.createButton("Mode: SMART", null); // Упрощенно
+        modeBtn.setPreferredSize(new Dimension(120, 30));
+        modeBtn.addActionListener(e -> {
+            isShuffleMode = !isShuffleMode;
+            modeBtn.setText(isShuffleMode ? "Mode: SHUFFLE" : "Mode: SMART");
+            loadNextCard();
+        });
+
+        controls.add(new JLabel("Тема: "));
+        controls.add(categoryBox);
+        controls.add(modeBtn);
+
+        infoLabel = new JLabel("...", SwingConstants.CENTER);
+        infoLabel.setOpaque(true);
+        infoLabel.setBorder(BorderFactory.createEmptyBorder(4,4,4,4));
+
+        topContainer.add(controls, BorderLayout.NORTH);
+        topContainer.add(infoLabel, BorderLayout.SOUTH);
+        add(topContainer, BorderLayout.NORTH);
+
+        // --- ЦЕНТР (тот же код, что был раньше) ---
         JPanel centerPanel = new JPanel(new GridLayout(3, 1, 10, 10));
         centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // вопрос
         questionArea = UIFactory.createArea(false);
         centerPanel.add(new JScrollPane(questionArea));
 
-        // ввод ответа
         JPanel inputContainer = new JPanel(new BorderLayout());
         inputContainer.add(UIFactory.createLabel("Ваш ответ:"), BorderLayout.NORTH);
         inputArea = UIFactory.createArea(true);
         inputContainer.add(new JScrollPane(inputArea), BorderLayout.CENTER);
         centerPanel.add(inputContainer);
 
-        // ответ (скрыт)
         JPanel answerContainer = new JPanel(new BorderLayout());
         feedbackLabel = UIFactory.createLabel(" ");
         answerContainer.add(feedbackLabel, BorderLayout.NORTH);
-
         answerArea = UIFactory.createArea(false);
         answerArea.setVisible(false);
         answerContainer.add(new JScrollPane(answerArea), BorderLayout.CENTER);
-
         centerPanel.add(answerContainer);
         add(centerPanel, BorderLayout.CENTER);
 
-        // ВЕРХ: информация
-        infoLabel = new JLabel("Загрузка...", SwingConstants.CENTER);
-        infoLabel.setOpaque(true);
-        infoLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        add(infoLabel, BorderLayout.NORTH);
-
-        // НИЗ: кнопки
+        // --- НИЗ ---
         buttonPanel = new JPanel(new FlowLayout());
         checkBtn = UIFactory.createButton("Проверить [Enter]", e -> checkAnswer());
-        yesBtn = UIFactory.createButton("ВЕРНО [->]", e -> submit(true));
-        noBtn = UIFactory.createButton("ОШИБКА [<-]", e -> submit(false));
-
+        yesBtn = UIFactory.createButton("ВЕРНО [→]", e -> submit(true));
+        noBtn = UIFactory.createButton("ОШИБКА [←]", e -> submit(false));
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    /**
-     * Загружает следующую карточку из сервиса и обновляет UI.
-     * Сбрасывает состояние полей, скрывает правильный ответ и
-     * обновляет строку состояния
-     */
-    private void loadNextCard() {
-        Card card = service.nextCard(isShuffleMode);
+    private void updateCategories() {
+        categoryBox.removeAllItems();
+        categoryBox.addItem("ВСЕ ТЕМЫ");
+        for (String cat : service.getAvailableCategories()) {
+            categoryBox.addItem(cat);
+        }
+    }
 
-        // Сброс UI
+    private void setupKeys() {
+        InputMap im = this.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap am = this.getActionMap();
+
+        im.put(KeyStroke.getKeyStroke("ENTER"), "enter");
+        am.put("enter", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                if (!isAnswerRevealed) checkAnswer();
+            }
+        });
+
+        im.put(KeyStroke.getKeyStroke("RIGHT"), "right");
+        am.put("right", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                if (isAnswerRevealed) submit(true);
+            }
+        });
+
+        im.put(KeyStroke.getKeyStroke("LEFT"), "left");
+        am.put("left", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                if (isAnswerRevealed) submit(false);
+            }
+        });
+    }
+
+    // Методы loadNextCard, checkAnswer, submit те же, но добавляем обновление флага
+    private void loadNextCard() {
+        isAnswerRevealed = false;
+        // ... (остальной код из предыдущего ответа)
+        Card card = service.nextCard(isShuffleMode);
         buttonPanel.removeAll();
         buttonPanel.add(checkBtn);
         inputArea.setText("");
@@ -120,80 +146,58 @@ public class StudyPanel extends JPanel {
         feedbackLabel.setText(" ");
 
         if (card == null) {
-            questionArea.setText("Нет карт в этой категории.");
+            questionArea.setText("Нет карт.");
             checkBtn.setEnabled(false);
             return;
         }
-
         checkBtn.setEnabled(true);
         questionArea.setText(card.getQuestion());
 
-        // Обновление строки состояния
-        String status = card.isNew() ? "НОВОЕ" : "УРОВЕНЬ " + card.getLevel();
-        infoLabel.setText(String.format("[%s] %s (%s)",
-                card.getCategory(), status, isShuffleMode ? "Shuffle" : "Smart"));
+        String status = card.isNew() ? "НОВОЕ" : "LVL " + card.getLevel();
+        infoLabel.setText(String.format("[%s] %s", card.getCategory(), status));
+
+        // Красим плашку статуса
+        if (card.isNew()) infoLabel.setBackground(config.ThemeColors.STATUS_NEW);
+        else if (card.getLevel() == 0) infoLabel.setBackground(config.ThemeColors.STATUS_ERROR);
+        else if (card.getLevel() < 8) infoLabel.setBackground(config.ThemeColors.STATUS_LEARNING);
+        else infoLabel.setBackground(config.ThemeColors.STATUS_MASTER);
+        infoLabel.setForeground(Color.WHITE);
 
         Theme.apply(this);
-        buttonPanel.revalidate();
-        buttonPanel.repaint();
+        // Важно перекрасить InfoLabel обратно, так как apply сбросит его в дефолт
+        buttonPanel.revalidate(); buttonPanel.repaint();
         inputArea.requestFocusInWindow();
     }
 
-    /**
-     * Проверяет ответ пользователя, показывает правильный ответ,
-     * визуальную обратную связь и переключает кнопки на
-     * «Верно» / «Ошибка»
-     */
     private void checkAnswer() {
-        String userText = inputArea.getText();
-        var result = service.checkAnswer(userText);
-        Card card = service.getCurrentCard();
+        if (service.getCurrentCard() == null) return;
+        isAnswerRevealed = true;
 
-        answerArea.setText(card.getAnswer());
+        String user = inputArea.getText();
+        var res = service.checkAnswer(user);
+
+        answerArea.setText(service.getCurrentCard().getAnswer());
         answerArea.setVisible(true);
         inputArea.setEditable(false);
 
-        feedbackLabel.setText(String.format("%s (%.0f%%)",
-                result.isPassed() ? "Отлично!" : "Нужно повторить",
-                result.getScore()));
-
-        Color resultColor = result.isPassed()
-                ? new Color(200, 255, 200)
-                : new Color(255, 200, 200);
-
+        // Исправленный блок с цветами
         if (Theme.isDark()) {
-            resultColor = result.isPassed()
-                    ? new Color(40, 80, 40)
-                    : new Color(80, 40, 40);
+            inputArea.setBackground(res.isPassed() ? new Color(40, 80, 40) : new Color(80, 40, 40));
+        } else {
+            inputArea.setBackground(res.isPassed() ? new Color(200, 255, 200) : new Color(255, 200, 200));
         }
 
-        inputArea.setBackground(resultColor);
+        feedbackLabel.setText(res.isPassed() ? "OK" : "TYPO");
 
         buttonPanel.removeAll();
         buttonPanel.add(noBtn);
         buttonPanel.add(yesBtn);
-        buttonPanel.revalidate();
-        buttonPanel.repaint();
-
-        (result.isPassed() ? yesBtn : noBtn).requestFocusInWindow();
+        buttonPanel.revalidate(); buttonPanel.repaint();
+        (res.isPassed() ? yesBtn : noBtn).requestFocusInWindow();
     }
 
-    /**
-     * Передаёт результат ответа сервису и загружает следующую карточку.
-     *
-     * @param correct true, если пользователь подтвердил правильность ответа
-     */
-    private void submit(boolean correct) {
-        service.submitResult(inputArea.getText(), correct);
-        loadNextCard();
-    }
-
-    /**
-     * Переключает режим выбора карточек (Shuffle/Smart)
-     * Используется контроллером горячих клавиш.
-     */
-    public void toggleMode() {
-        isShuffleMode = !isShuffleMode;
+    private void submit(boolean result) {
+        service.submitResult(inputArea.getText(), result);
         loadNextCard();
     }
 }

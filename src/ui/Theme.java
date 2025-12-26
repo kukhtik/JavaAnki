@@ -1,6 +1,7 @@
 package ui;
 
 import config.ThemeColors;
+import lombok.Getter;
 
 import javax.swing.*;
 import java.awt.*;
@@ -19,14 +20,11 @@ import java.awt.*;
  * </ul>
  */
 public class Theme {
+    @Getter
     private static boolean isDark = true;
 
     public static void toggle() {
         isDark = !isDark;
-    }
-
-    public static boolean isIsDark() {
-        return isDark;
     }
 
     public static Color getBackground() {

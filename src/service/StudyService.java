@@ -20,6 +20,7 @@ public class StudyService {
     private final HistoryRepository historyRepo = new HistoryRepository();
     private final GradingService gradingService = new GradingService();
     private final Random random = new Random();
+    // Добавить getter для всех карт (для StatsPanel)
     @Getter private List<Card> allCards = new ArrayList<>();
     private List<Card> activeDeck = new ArrayList<>();
 
@@ -165,4 +166,9 @@ public class StudyService {
         double score;
         boolean passed;
     }
+    // Добавить в StudyService.java
+    public List<model.HistoryRecord> getHistory() {
+        return historyRepo.loadHistory();
+    }
+
 }
