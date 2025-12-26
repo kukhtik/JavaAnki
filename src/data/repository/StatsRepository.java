@@ -9,16 +9,15 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class StatsRepository {
+    private static final Logger LOGGER = Logger.getLogger(StatsRepository.class.getName());
     private static final String STATS_FILE = "anki_stats.txt";
     private final FileService fileService = new FileService();
     private final Path path = Paths.get(STATS_FILE);
 
-    /**
-     * Загрузка статистики в map
-     */
     public Map<String, Integer> loadStats() {
         Map<String, Integer> stats = new HashMap<>();
         List<String> lines = fileService.readAllLines(path);
@@ -29,31 +28,28 @@ public class StatsRepository {
                 if (parts.length >= 2) {
                     stats.put(parts[0], Integer.parseInt(parts[1]));
                 }
-            } catch (NumberFormatException ignored) {
-            }
+            } catch (NumberFormatException ignored) {}
         }
+
+        LOGGER.info("Загружена статистика (anki_stats.txt): " + stats.size() + " записей.");
         return stats;
     }
 
-    /**
-     * Сохраняет уровень карт
-     */
     public void saveStats(List<Card> cards) {
-        // строки HASHCODE|LEVEL
         String content = cards.stream()
-                .filter(c -> !c.isNew()) // только то, что уже попадалось
-                .map(c -> {
-                    String id = generateId(c.getQuestion());
-                    return id + "|" + c.getLevel();
-                })
+                .filter(c -> !c.isNew())
+                .map(c -> generateId(c.getQuestion()) + "|" + c.getLevel())
                 .collect(Collectors.joining(System.lineSeparator()));
+
         try {
             java.nio.file.Files.writeString(path, content);
+            // LOGGER.info("Статистика сохранена."); // Слишком часто спамит, лучше не включать
         } catch (java.io.IOException e) {
-            e.printStackTrace();
+            LOGGER.severe("Ошибка сохранения статистики: " + e.getMessage());
         }
     }
-    public String generateId(String question){
-        return String.valueOf(TextUtil.normalizedForId(question).hashCode());
+
+    public String generateId(String question) {
+        return String.valueOf(TextUtil.normalizeForId(question).hashCode());
     }
 }
