@@ -13,9 +13,9 @@ import java.awt.*;
  * <p>
  * Потом надо раздедить:
  * <ul>
- *     <li>ThemeState — хранение текущей темы</li>
- *     <li>ThemeApplicator — рекурсивная покраска компонентов</li>
- *     <li>ThemeColors — палитра цветов</li>
+ *     <li>ThemeState - хранение текущей темы</li>
+ *     <li>ThemeApplicator - рекурсивная покраска компонентов</li>
+ *     <li>ThemeColors - палитра цветов</li>
  * </ul>
  */
 public class Theme {
