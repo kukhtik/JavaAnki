@@ -25,7 +25,8 @@ public class ImportService {
     }
 
     public String performImport() {
-        studyService.reloadSession(); // Обновляем состояние перед импортом
+        // 1. Перезагрузка состояния с диска (защита от ручного удаления файлов)
+        studyService.reloadSession();
 
         Path importPath = Paths.get(IMPORT_FILE);
         if (!Files.exists(importPath)) return "Файл import.txt не найден.";
@@ -33,6 +34,7 @@ public class ImportService {
         List<String> lines = fileService.readAllLines(importPath);
         if (lines.isEmpty()) return "Файл import.txt пуст.";
 
+        // Загружаем хэши текстов существующих вопросов
         Set<String> existingHashes = new HashSet<>();
         studyService.getAllCards().forEach(c ->
                 existingHashes.add(TextUtil.normalizeForId(c.getQuestion()))
@@ -46,12 +48,14 @@ public class ImportService {
         int errors = 0;
 
         for (String line : lines) {
+            // Ищем разделитель блоков
             if (line.trim().equals("===")) {
                 if (!currentBlock.isEmpty()) {
                     int res = processBlock(currentBlock, existingHashes);
                     if (res == 1) added++;
                     else if (res == 2) skipped++;
                     else {
+                        // Ошибка (например, нет поля QUESTION), оставляем блок в файле
                         linesToKeep.addAll(currentBlock);
                         linesToKeep.add("===");
                         errors++;
@@ -62,15 +66,24 @@ public class ImportService {
                 currentBlock.add(line);
             }
         }
+
+        // Обработка "хвоста" файла (если забыли === в конце)
         if (!currentBlock.isEmpty()) {
             if (currentBlock.stream().anyMatch(s -> !s.trim().isEmpty())) {
-                linesToKeep.addAll(currentBlock);
-                errors++;
+                // Пытаемся обработать последний блок тоже
+                int res = processBlock(currentBlock, existingHashes);
+                if (res == 1) added++;
+                else if (res == 2) skipped++;
+                else {
+                    linesToKeep.addAll(currentBlock);
+                    errors++;
+                }
             }
         }
 
         fileService.ensureDirectory(Paths.get(DECKS_DIR));
 
+        // Перезаписываем import.txt (удаляем успешные, оставляем ошибки)
         try {
             if (linesToKeep.isEmpty()) {
                 Files.write(importPath, new byte[0], StandardOpenOption.TRUNCATE_EXISTING);
@@ -78,33 +91,46 @@ public class ImportService {
                 Files.write(importPath, linesToKeep, java.nio.charset.StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
             }
         } catch (Exception e) {
-            LOGGER.severe("Ошибка записи import.txt: " + e.getMessage());
+            LOGGER.severe("Ошибка обновления import.txt: " + e.getMessage());
         }
 
-        // ВАЖНО: Service сам кинет событие DATA_UPDATED при перезагрузке
+        // Обновляем сессию еще раз, чтобы новые карты появились в обучении
         studyService.reloadSession();
 
-        return String.format("Импорт завершен.\nДобавлено: %d\nПропущено: %d\nОшибок: %d", added, skipped, errors);
+        return String.format("Импорт завершен.\nДобавлено: %d\nПропущено (дубликаты): %d\nОшибок: %d", added, skipped, errors);
     }
 
+    /**
+     * Обрабатывает один блок строк.
+     * @return 1=Успех, 2=Дубликат, 0=Ошибка формата
+     */
     private int processBlock(List<String> buffer, Set<String> existingHashes) {
-        // ИСПОЛЬЗУЕМ ПАРСЕР
+        // 1. Используем CardParser + CardFactory
+        // Парсер вернет объект Card с уже сгенерированным UUID (так как в import.txt нет поля ID)
         Card tempCard = CardParser.parseSingleBlock(buffer, "import_temp");
-        if (tempCard == null) return 0; // Ошибка формата
 
+        if (tempCard == null) return 0; // Невалидный блок (нет вопроса или ответа)
+
+        // 2. Проверка на дубликат по ТЕКСТУ
         String contentHash = TextUtil.normalizeForId(tempCard.getQuestion());
-        if (existingHashes.contains(contentHash)) return 2; // Дубликат
+        if (existingHashes.contains(contentHash)) return 2;
 
-        // Определяем имя файла
+        // 3. Определяем путь к файлу
         String cat = tempCard.getCategory();
         String safeName = cat.replaceAll("[^a-zA-Z0-9а-яА-Я ._-]", "");
         Path deckPath = Paths.get(DECKS_DIR, safeName + ".txt");
 
-        // Формируем строку для записи (с новым UUID)
+        // 4. Формируем запись. Берем UUID, который сгенерировала Фабрика внутри Парсера.
         String entry = String.format("ID: %s%nCATEGORY: %s%nQUESTION:%n%s%nANSWER:%n%s%n===%n",
-                tempCard.getId(), tempCard.getCategory(), tempCard.getQuestion(), tempCard.getAnswer());
+                tempCard.getId(),
+                tempCard.getCategory(),
+                tempCard.getQuestion(),
+                tempCard.getAnswer());
 
+        // 5. Записываем
         fileService.appendLine(deckPath, entry);
+
+        // Добавляем хэш в локальный сет, чтобы не добавить дубликат внутри того же импорта
         existingHashes.add(contentHash);
         return 1;
     }
