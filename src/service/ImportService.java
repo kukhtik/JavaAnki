@@ -23,8 +23,9 @@ public class ImportService {
     }
 
     public String performImport() {
-        // 1. Сначала перезагружаем состояние с диска!
-        // Если вы удалили файлы вручную, программа должна об этом узнать ДО проверки дубликатов.
+        // 1. Принудительная перезагрузка перед импортом
+        // Это гарантирует, что мы знаем актуальное состояние файлов на диске (вдруг пользователь удалил файл)
+        // И также гарантирует, что у всех карт в памяти уже есть UUID
         studyService.reloadSession();
 
         Path importPath = Paths.get(IMPORT_FILE);
@@ -33,10 +34,10 @@ public class ImportService {
         List<String> lines = fileService.readAllLines(importPath);
         if (lines.isEmpty()) return "Файл import.txt пуст.";
 
-        // Загружаем актуальные ID (после перезагрузки)
-        Set<String> existingQuestions = new HashSet<>();
+        // Загружаем существующие хэши текстов (чтобы не добавить дубликат по смыслу)
+        Set<String> existingContentHashes = new HashSet<>();
         studyService.getAllCards().forEach(c ->
-                existingQuestions.add(TextUtil.normalizeForId(c.getQuestion()))
+                existingContentHashes.add(TextUtil.normalizeForId(c.getQuestion()))
         );
 
         List<String> linesToKeep = new ArrayList<>();
@@ -50,7 +51,7 @@ public class ImportService {
             String tr = line.trim();
             if (tr.equals("===")) {
                 if (!currentBlock.isEmpty()) {
-                    int res = processBlock(currentBlock, existingQuestions);
+                    int res = processBlock(currentBlock, existingContentHashes);
                     if (res == 1) added++;
                     else if (res == 2) skipped++;
                     else {
@@ -64,6 +65,7 @@ public class ImportService {
                 currentBlock.add(line);
             }
         }
+        // Обработка последнего блока, если нет === в конце
         if (!currentBlock.isEmpty()) {
             if (currentBlock.stream().anyMatch(s -> !s.trim().isEmpty())) {
                 linesToKeep.addAll(currentBlock);
@@ -73,6 +75,7 @@ public class ImportService {
 
         fileService.ensureDirectory(Paths.get(DECKS_DIR));
 
+        // Перезаписываем import.txt (удаляем успешно импортированные)
         try {
             if (linesToKeep.isEmpty()) {
                 Files.write(importPath, new byte[0], StandardOpenOption.TRUNCATE_EXISTING);
@@ -83,13 +86,16 @@ public class ImportService {
             LOGGER.severe("Ошибка обновления import.txt: " + e.getMessage());
         }
 
-        // Обновляем еще раз, чтобы новые карты появились в обучении
+        // Обновляем сессию, чтобы новые карты появились
         studyService.reloadSession();
 
         return String.format("Импорт завершен.\nДобавлено: %d\nПропущено (дубликаты): %d\nОшибок (осталось в файле): %d", added, skipped, errors);
     }
 
-    private int processBlock(List<String> buffer, Set<String> existing) {
+    /**
+     * @return 1=Success, 2=Duplicate, 0=Error
+     */
+    private int processBlock(List<String> buffer, Set<String> existingHashes) {
         String cat = null, q = null, a = null;
         StringBuilder qB = new StringBuilder();
         StringBuilder aB = new StringBuilder();
@@ -110,16 +116,23 @@ public class ImportService {
 
         if (cat == null || q == null || q.isEmpty() || a == null || a.isEmpty()) return 0;
 
-        String id = TextUtil.normalizeForId(q);
-        if (existing.contains(id)) return 2;
+        // Проверяем дубликат по ТЕКСТУ вопроса
+        String contentHash = TextUtil.normalizeForId(q);
+        if (existingHashes.contains(contentHash)) return 2;
 
         String safeName = cat.replaceAll("[^a-zA-Z0-9а-яА-Я ._-]", "");
         Path deckPath = Paths.get(DECKS_DIR, safeName + ".txt");
 
-        String entry = String.format("CATEGORY: %s%nQUESTION:%n%s%nANSWER:%n%s%n===%n", cat, q, a);
+        // ГЕНЕРИРУЕМ НОВЫЙ UUID
+        String newId = UUID.randomUUID().toString();
+
+        // Записываем карту с полем ID
+        String entry = String.format("ID: %s%nCATEGORY: %s%nQUESTION:%n%s%nANSWER:%n%s%n===%n",
+                newId, cat, q, a);
+
         fileService.appendLine(deckPath, entry);
 
-        existing.add(id);
+        existingHashes.add(contentHash);
         return 1;
     }
 }

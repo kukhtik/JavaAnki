@@ -21,7 +21,6 @@ public class StatsRepository {
     public Map<String, Integer> loadStats() {
         Map<String, Integer> stats = new HashMap<>();
         List<String> lines = fileService.readAllLines(path);
-
         for (String line : lines) {
             try {
                 String[] parts = line.split("\\|");
@@ -30,26 +29,25 @@ public class StatsRepository {
                 }
             } catch (NumberFormatException ignored) {}
         }
-
-        LOGGER.info("Загружена статистика (anki_stats.txt): " + stats.size() + " записей.");
         return stats;
     }
 
     public void saveStats(List<Card> cards) {
+        // Теперь сохраняем UUID вместо хэша
         String content = cards.stream()
                 .filter(c -> !c.isNew())
-                .map(c -> generateId(c.getQuestion()) + "|" + c.getLevel())
+                .map(c -> c.getId() + "|" + c.getLevel())
                 .collect(Collectors.joining(System.lineSeparator()));
 
         try {
             java.nio.file.Files.writeString(path, content);
-            // LOGGER.info("Статистика сохранена."); // Слишком часто спамит, лучше не включать
         } catch (java.io.IOException e) {
             LOGGER.severe("Ошибка сохранения статистики: " + e.getMessage());
         }
     }
 
-    public String generateId(String question) {
+    // Старый метод нужен только для миграции
+    public String generateLegacyId(String question) {
         return String.valueOf(TextUtil.normalizeForId(question).hashCode());
     }
 }

@@ -6,6 +6,7 @@ import data.repository.HistoryRepository;
 import data.repository.StatsRepository;
 import lombok.Getter;
 import model.Card;
+import util.TextUtil;
 
 import java.util.*;
 import java.util.logging.Logger;
@@ -31,66 +32,88 @@ public class StudyService {
         reloadSession();
     }
 
+    /**
+     * Основной метод загрузки.
+     * Выполняет миграцию на UUID и дедупликацию.
+     */
     public void reloadSession() {
-        LOGGER.info(">>> ЗАПУСК СЕССИИ: ОБРАБОТКА ДАННЫХ...");
+        LOGGER.info(">>> ЗАПУСК СЕССИИ (UUID SYSTEM)...");
 
         List<Card> rawCards = deckRepo.loadAllCards();
         Map<String, Integer> stats = statsRepo.loadStats();
         groupRepo.loadStructure();
 
-        // Карта для отслеживания дубликатов: ID -> Имя файла первого появления
-        Map<String, Card> uniqueMap = new HashMap<>();
+        // Сет для отслеживания текстовых дубликатов
+        Set<String> seenContentHashes = new HashSet<>();
         this.allCards = new ArrayList<>();
 
-        int statsApplied = 0;
-        int duplicatesFound = 0;
+        int statsRestored = 0;
+        int duplicatesSkipped = 0;
 
         for (Card c : rawCards) {
-            String id = statsRepo.generateId(c.getQuestion());
+            // 1. Дедупликация по тексту вопроса
+            String contentHash = TextUtil.normalizeForId(c.getQuestion());
 
-            // ПРОВЕРКА НА ДУБЛИКАТЫ С ЛОГИРОВАНИЕМ
-            if (uniqueMap.containsKey(id)) {
-                Card existing = uniqueMap.get(id);
-                // Логируем только если файлы разные (если внутри одного файла дубль - это менее важно)
-                if (!existing.getSourceFile().equals(c.getSourceFile())) {
-                    LOGGER.warning(String.format("ДУБЛИКАТ: Вопрос '%s' из [%s] уже загружен из [%s]. Пропуск.",
-                            trimLog(c.getQuestion()), c.getSourceFile(), existing.getSourceFile()));
-                }
-                duplicatesFound++;
+            if (seenContentHashes.contains(contentHash)) {
+                // Если мы уже загрузили такой вопрос в этой сессии - пропускаем
+                duplicatesSkipped++;
                 continue;
             }
+            seenContentHashes.add(contentHash);
 
-            // Если карта уникальная
-            uniqueMap.put(id, c);
+            // 2. Поиск статистики (Миграция)
+            boolean foundStat = false;
 
-            // Применяем статистику
-            if (stats.containsKey(id)) {
-                c.setLevel(stats.get(id));
+            // А) Сначала ищем по UUID (если карта уже обновлена)
+            if (c.getId() != null && stats.containsKey(c.getId())) {
+                c.setLevel(stats.get(c.getId()));
                 c.setNew(false);
-                statsApplied++;
-            } else {
+                foundStat = true;
+            }
+            // Б) Если по UUID не нашли, ищем по старому хэшу текста (для старых карт)
+            else {
+                String legacyId = statsRepo.generateLegacyId(c.getQuestion());
+                if (stats.containsKey(legacyId)) {
+                    c.setLevel(stats.get(legacyId));
+                    c.setNew(false);
+                    foundStat = true;
+                }
+            }
+
+            // Если статистики нет нигде - карта новая
+            if (!foundStat) {
                 c.setLevel(0);
                 c.setNew(true);
             }
+
+            if (foundStat) statsRestored++;
             this.allCards.add(c);
         }
 
-        LOGGER.info(String.format("=== ИТОГ ЗАГРУЗКИ ==="));
-        LOGGER.info(String.format("Всего найдено карт в файлах: %d", rawCards.size()));
-        LOGGER.info(String.format("Отброшено дубликатов: %d", duplicatesFound));
-        LOGGER.info(String.format("Загружено в память: %d", allCards.size()));
-        LOGGER.info(String.format("Восстановлена статистика для: %d карт (из %d записей в файле)", statsApplied, stats.size()));
-        LOGGER.info("=========================");
+        // 3. ПЕРЕЗАПИСЬ ФАЙЛОВ (Закрепление UUID)
+        // Мы группируем карты обратно по файлам и перезаписываем их.
+        // Это гарантирует, что если у карты не было ID в файле, он там появится.
+        Map<String, List<Card>> cardsByFile = allCards.stream()
+                .collect(Collectors.groupingBy(Card::getSourceFile));
+
+        for (Map.Entry<String, List<Card>> entry : cardsByFile.entrySet()) {
+            deckRepo.saveDeck(entry.getKey(), entry.getValue());
+        }
+
+        // 4. Сохраняем статистику в новом формате (UUID -> Level)
+        statsRepo.saveStats(allCards);
+
+        LOGGER.info("=== ИТОГ ЗАГРУЗКИ ===");
+        LOGGER.info(String.format("Загружено карт: %d", allCards.size()));
+        LOGGER.info(String.format("Дубликатов пропущено: %d", duplicatesSkipped));
+        LOGGER.info(String.format("Статистики подтянуто: %d", statsRestored));
+        LOGGER.info("Все файлы колод обновлены (UUID закреплены).");
 
         resetFilter();
     }
 
-    // Вспомогательный метод для красивого лога
-    private String trimLog(String s) {
-        return s.replace("\n", " ").trim().substring(0, Math.min(30, s.length())) + "...";
-    }
+    // --- ФИЛЬТРАЦИЯ ---
 
-    // --- ОСТАЛЬНОЙ КОД БЕЗ ИЗМЕНЕНИЙ ---
     public void setFilter(String selectedItem) {
         if (selectedItem == null || selectedItem.equals("ВСЕ ТЕМЫ")) {
             resetFilter();
@@ -122,6 +145,8 @@ public class StudyService {
         return options;
     }
 
+    // --- SRS ЛОГИКА ---
+
     public Card nextCard(boolean isShuffle) {
         if (activeDeck.isEmpty()) return null;
         if (activeDeck.size() == 1) {
@@ -152,7 +177,10 @@ public class StudyService {
             if (currentCard.getLevel() > 5) currentCard.setLevel(2);
             else currentCard.setLevel(0);
         }
+
         historyRepo.saveEntry(currentCard.getQuestion(), userAnswer, correct);
+
+        // Сохраняем статистику по UUID
         statsRepo.saveStats(allCards);
     }
 

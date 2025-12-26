@@ -1,3 +1,4 @@
+ID: d613a105-8914-47be-adf5-ff229886697a
 CATEGORY: Testing
 QUESTION:
 Пирамида тестирования.
@@ -7,6 +8,7 @@ ANSWER:
 Середина: Интеграционные тесты (проверяют взаимодействие компонентов).
 Вершина: E2E (End-to-End) тесты (медленные, дорогие, их мало, проверяют сценарии пользователя).
 ===
+ID: 059012a8-d8f6-43c0-8f2e-6e6b2b995d6b
 CATEGORY: Testing
 QUESTION:
 Что такое FIRST принципы тестирования?
@@ -18,6 +20,7 @@ R - Repeatable (Повторяемый).
 S - Self-validating (Сам говорит pass/fail).
 T - Timely (Написан вовремя).
 ===
+ID: 3652252d-a99f-423e-a712-32304c0974f6
 CATEGORY: Testing
 QUESTION:
 Зачем нужны Mock-объекты (Mockito)?

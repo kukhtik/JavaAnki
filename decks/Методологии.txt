@@ -1,3 +1,4 @@
+ID: 9a6e7bd4-33b4-4808-9a20-b8527f7e9a43
 CATEGORY: Методологии
 QUESTION:
 Что такое CI/CD?

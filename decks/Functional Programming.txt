@@ -1,3 +1,4 @@
+ID: 8c9fab4c-4c59-4b57-8a48-0ac2a0aeec77
 CATEGORY: Functional Programming
 QUESTION:
 Назовите основные встроенные функциональные интерфейсы в Java (java.util.function).
@@ -8,6 +9,7 @@ Consumer<T>: T -> void (потребитель, действие).
 Supplier<T>: void -> T (поставщик, создание объекта).
 UnaryOperator<T>: T -> T (частный случай Function).
 ===
+ID: 1fca42a8-6ccc-4b14-aeca-f2e99cd20b68
 CATEGORY: Functional Programming
 QUESTION:
 Что такое лямбда-выражение?
@@ -15,12 +17,14 @@ ANSWER:
 Анонимная функция (блок кода), которую можно передать как аргумент или сохранить в переменную. Сокращенная запись для реализации функционального интерфейса.
 Синтаксис: (аргументы) -> { тело }.
 ===
+ID: db06d167-da56-4ac8-adc8-9fd036904b60
 CATEGORY: Functional Programming
 QUESTION:
 Что такое Stream API?
 ANSWER:
 Инструмент для обработки последовательностей элементов (коллекций, массивов) в функциональном стиле. Позволяет писать декларативный код (что сделать, а не как).
 ===
+ID: 02171ceb-649d-4222-851c-042eea4ea66f
 CATEGORY: Functional Programming
 QUESTION:
 В чем разница между Collection и Stream?
@@ -28,6 +32,7 @@ ANSWER:
 Collection: хранит данные в памяти. Это структура данных.
 Stream: не хранит данные, а передает их из источника через конвейер операций. Это поток данных. Стримы одноразовые (нельзя переиспользовать).
 ===
+ID: 18efcd4e-711f-4851-849b-d8bc4902e5d7
 CATEGORY: Functional Programming
 QUESTION:
 Какие бывают операции в Stream API?
@@ -35,12 +40,14 @@ ANSWER:
 Промежуточные (Intermediate): возвращают новый Stream, выполняются лениво (filter, map, sorted, limit).
 Терминальные (Terminal): запускают обработку, возвращают результат или void, закрывают стрим (collect, forEach, reduce, count).
 ===
+ID: db6ac6f8-7030-490d-8047-693043f852d4
 CATEGORY: Functional Programming
 QUESTION:
 Что такое "ленивые вычисления" (Lazy Evaluation) в стримах?
 ANSWER:
 Промежуточные операции не выполняются сразу. Они лишь "настраивают" конвейер. Реальная обработка данных начинается только при вызове терминальной операции. Это позволяет оптимизировать работу (например, findFirst остановится после первого найденного элемента, не обрабатывая остальные).
 ===
+ID: f316ba57-c04c-4495-9569-3f9f7af4c558
 CATEGORY: Functional Programming
 QUESTION:
 В чем разница между map() и flatMap()?
@@ -48,12 +55,14 @@ ANSWER:
 map(Function): преобразует каждый элемент в один элемент другого типа (T -> R). (Один-к-одному).
 flatMap(Function): преобразует каждый элемент в Stream элементов, а затем "сплющивает" (flat) все стримы в один общий. (Один-ко-многим). Используется для разворачивания вложенных структур (List<List> -> List).
 ===
+ID: 932f519f-e1e1-4316-b5ca-2c47cc0d6592
 CATEGORY: Functional Programming
 QUESTION:
 Что такое Optional в контексте Stream API?
 ANSWER:
 Многие терминальные операции (findFirst, min, max, reduce) могут не найти значение (если стрим пуст). Они возвращают Optional, чтобы избежать NPE и заставить обработать отсутствие значения.
 ===
+ID: 42b832ce-8a4d-4260-84aa-d5a2ee6fed9f
 CATEGORY: Functional Programming
 QUESTION:
 Что такое "Method Reference" (Ссылка на метод)?
@@ -62,6 +71,7 @@ ANSWER:
 Синтаксис: ClassName::methodName.
 Пример: System.out::println вместо s -> System.out.println(s).
 ===
+ID: 36821cfa-1db4-4a45-b166-5b7791077b47
 CATEGORY: Functional Programming
 QUESTION:
 Что такое параллельные стримы (parallelStream)? Когда их стоит использовать?
@@ -69,6 +79,7 @@ ANSWER:
 Стримы, которые обрабатывают данные в несколько потоков (используя ForkJoinPool).
 Стоит использовать на очень больших наборах данных и тяжелых операциях, где накладные расходы на распараллеливание окупаются. В простых случаях могут работать медленнее обычных из-за оверхеда.
 ===
+ID: a65de43e-a928-4861-ac62-55296c76f2ab
 CATEGORY: Functional Programming
 QUESTION:
 Что такое Collectors? Приведите примеры.
@@ -76,6 +87,7 @@ ANSWER:
 Утилитный класс с реализациями Collector для терминальной операции collect().
 Примеры: toList(), toSet(), toMap(), joining(), groupingBy().
 ===
+ID: 3a1fb515-50d9-4fa9-95f8-51a2b9a6e740
 CATEGORY: Functional Programming
 QUESTION:
 Что такое "Чистая функция" (Pure Function)?
@@ -84,12 +96,14 @@ ANSWER:
 Детерминирована: при одних и тех же входных данных всегда возвращает один и тот же результат.
 Не имеет побочных эффектов (side effects): не меняет состояние внешнего мира (глобальные переменные, I/O, изменение аргументов).
 ===
+ID: d6b5356a-d30d-46a3-8689-53c9bd95c716
 CATEGORY: Functional Programming
 QUESTION:
 Можно ли использовать локальные переменные внутри лямбды?
 ANSWER:
 Да, но они должны быть effectively final (то есть не меняться после инициализации), так как лямбда захватывает копию значения, а не саму переменную.
 ===
+ID: ed369b63-d1a6-4933-90a0-621004b675e2
 CATEGORY: Functional Programming
 QUESTION:
 В чем отличие forEach в Iterable и stream().forEach()?
@@ -97,14 +111,17 @@ ANSWER:
 Iterable.forEach (Java 8): просто цикл по коллекции, порядок гарантирован (если коллекция упорядочена).
 stream().forEach(): терминальная операция стрима. В параллельном стриме порядок выполнения НЕ гарантируется. Для гарантии порядка в параллелизме нужен forEachOrdered.
 ===
+ID: 70e59178-165f-49eb-a561-ca3456eff9aa
 CATEGORY: Functional Programming
 QUESTION:
 Что такое reduce?
 ANSWER:
 Универсальная терминальная операция свертки (reduction). Преобразует стрим в единое значение, последовательно применяя бинарный оператор (аккумулятор) к элементам. (Пример: сумма чисел, конкатенация строк).
 ===
+ID: 08403c04-e04d-4b5f-9e23-f89137bcab24
 CATEGORY: Functional Programming
 QUESTION:
 Что такое замыкание (Closure) в Java?
 ANSWER:
 Механизм, позволяющий лямбде (или анонимному классу) "захватывать" и использовать переменные из своего лексического контекста (окружения), даже если этот контекст уже перестал существовать. В Java ограничено effectively final переменными.
+===

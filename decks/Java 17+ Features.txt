@@ -1,3 +1,4 @@
+ID: edc6484d-6b00-4a6d-8bed-cb87b5784a3a
 CATEGORY: Java 17+ Features
 QUESTION:
 Что такое record (запись)?
@@ -6,6 +7,7 @@ ANSWER:
 Автоматически генерирует: конструктор, геттеры (без префикса get), equals, hashCode, toString.
 Рекорды всегда final.
 ===
+ID: cae131c1-3b6c-4a1a-9f98-130c3b18ce02
 CATEGORY: Java 17+ Features
 QUESTION:
 Что такое Sealed Classes (Запечатанные классы)?
@@ -14,6 +16,7 @@ ANSWER:
 Наследники должны быть final, sealed или non-sealed.
 Позволяет компилятору контролировать иерархию (полезно для Pattern Matching).
 ===
+ID: e59334bc-ce4a-41b1-a0e2-a68b4eb7def0
 CATEGORY: Java 17+ Features
 QUESTION:
 Что такое Pattern Matching (Сопоставление с образцом) для instanceof?
@@ -21,18 +24,21 @@ ANSWER:
 Избавляет от явного приведения типов.
 if (obj instanceof String s) { s.length(); } — переменная s уже приведена к String и доступна в блоке.
 ===
+ID: 0980c252-6b7a-47cd-84a1-633f181f061b
 CATEGORY: Java 17+ Features
 QUESTION:
 Что такое Switch Expressions?
 ANSWER:
 Обновленный switch, который может возвращать значение. Использует стрелочный синтаксис (->), не требует break (нет "проливания" кейсов).
 ===
+ID: 399b4774-2a4f-437c-965e-60b989c0cb6d
 CATEGORY: Java 17+ Features
 QUESTION:
 Что такое Text Blocks (Текстовые блоки)?
 ANSWER:
 Многострочные строки, заключенные в тройные кавычки """. Удобны для JSON, SQL, HTML внутри кода. Сохраняют форматирование.
 ===
+ID: e65ad4db-cb6d-4683-8c93-a97dcfdecc60
 CATEGORY: Java 17+ Features
 QUESTION:
 Что такое var (Local Variable Type Inference)?
@@ -41,6 +47,7 @@ ANSWER:
 var list = new ArrayList<String>();.
 Работает только для локальных переменных с инициализатором. Не работает для полей, аргументов методов, возвращаемых значений.
 ===
+ID: 30cb40aa-c00c-4735-9b80-c62d8a66b0a2
 CATEGORY: Методологии
 QUESTION:
 Что такое Agile?
@@ -51,6 +58,7 @@ ANSWER:
 Сотрудничество с заказчиком важнее контракта.
 Готовность к изменениям важнее следования плану.
 ===
+ID: ef4d6065-552c-4528-95a8-48875eefb1a0
 CATEGORY: Методологии
 QUESTION:
 Что такое Scrum?
@@ -60,6 +68,7 @@ ANSWER:
 Артефакты: Product Backlog, Sprint Backlog, Increment.
 События: Planning, Daily, Review, Retrospective.
 ===
+ID: e8bf9780-a27c-4936-ad56-786fe8a7874d
 CATEGORY: Методологии
 QUESTION:
 В чем разница между Scrum и Kanban?
@@ -67,6 +76,7 @@ ANSWER:
 Scrum: Итерации (спринты) фиксированной длины. Роли и церемонии строгие. Очистка доски каждый спринт.
 Kanban: Непрерывный поток (Flow). Нет спринтов (опционально). Лимиты на количество задач в работе (WIP limits). Главная цель — уменьшить время прохождения задачи (Lead Time).
 ===
+ID: a95af9fd-24ac-4f28-a1fe-869336117004
 CATEGORY: Методологии
 QUESTION:
 Что такое TDD (Test Driven Development)?
@@ -76,6 +86,7 @@ ANSWER:
 Написать минимальный код, чтобы тест прошел.
 Отрефакторить код.
 ===
+ID: 4b964493-9cdf-43a8-a52d-a440402d06d9
 CATEGORY: Методологии
 QUESTION:
 Что такое Технический долг (Technical Debt)?
