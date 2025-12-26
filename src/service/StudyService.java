@@ -1,12 +1,18 @@
 package service;
 
+// Убрал ошибочный импорт data.repository.GradingService
+import data.repository.HistoryRepository;
 import lombok.Getter;
+import lombok.Value;
 import model.Card;
+import model.HistoryRecord;
+import model.dto.StatsRow;
 import service.algorithm.SpacedRepetitionAlgorithm;
 import service.session.SessionManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -15,11 +21,12 @@ public class StudyService {
 
     private final SessionManager sessionManager;
     private final SpacedRepetitionAlgorithm algorithm;
-    private final GradingService gradingService;
+    private final GradingService gradingService; // Теперь класс виден, так как он в том же пакете
 
-    // Состояние UI
     private List<Card> activeDeck = new ArrayList<>();
-    @Getter private Card currentCard;
+
+    @Getter
+    private Card currentCard;
 
     public StudyService(SessionManager sessionManager) {
         this.sessionManager = sessionManager;
@@ -36,6 +43,35 @@ public class StudyService {
 
     public List<Card> getAllCards() {
         return sessionManager.getAllCards();
+    }
+
+    // --- ИСТОРИЯ ---
+    public List<HistoryRecord> getHistory() {
+        return new HistoryRepository().loadHistory();
+    }
+
+    // --- СТАТИСТИКА ---
+    public List<StatsRow> getStatistics() {
+        List<Card> all = sessionManager.getAllCards();
+        List<StatsRow> rows = new ArrayList<>();
+
+        Map<String, List<Card>> grouped = all.stream()
+                .collect(Collectors.groupingBy(Card::getCategory));
+
+        for (var entry : grouped.entrySet()) {
+            rows.add(calculateRow(entry.getKey(), entry.getValue()));
+        }
+
+        rows.add(calculateRow("=== ИТОГО ===", all));
+        return rows;
+    }
+
+    private StatsRow calculateRow(String name, List<Card> list) {
+        long total = list.size();
+        long cntNew = list.stream().filter(Card::isNew).count();
+        long cntMaster = list.stream().filter(c -> !c.isNew() && c.getLevel() >= 8).count();
+        long cntLearn = total - cntNew - cntMaster;
+        return new StatsRow(name, total, cntNew, cntLearn, cntMaster);
     }
 
     // --- ФИЛЬТРАЦИЯ ---
@@ -73,19 +109,11 @@ public class StudyService {
     public void submitResult(String userAnswer, boolean correct) {
         if (currentCard == null) return;
 
-        // 1. Алгоритм обновляет состояние объекта карты
         algorithm.updateCardProgress(currentCard, correct);
-
-        // 2. Менеджер сохраняет изменения на диск
         sessionManager.saveProgress(currentCard, userAnswer, correct);
     }
 
-    public List<model.HistoryRecord> getHistory() {
-        // Тут можно было бы тоже делегировать SessionManager, но пока так
-        return new data.repository.HistoryRepository().loadHistory();
-    }
-
-    @lombok.Value
+    @Value
     public static class GradingResult {
         double score;
         boolean passed;

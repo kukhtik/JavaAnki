@@ -16,7 +16,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-public class Theme {
+public class ThemeManager {
     private static boolean isDark = true;
 
     public static void toggle() { isDark = !isDark; }
@@ -48,100 +48,6 @@ public class Theme {
         UIManager.put("List.foreground", txt);
         UIManager.put("MenuItem.background", pnl);
         UIManager.put("MenuItem.foreground", txt);
-    }
-
-    /**
-     * Создает полностью кастомное окно сообщения без системных рамок и иконок.
-     */
-    public static void showInfoDialog(Component parent, String message) {
-        Window parentWindow = SwingUtilities.getWindowAncestor(parent);
-        JDialog dialog = new JDialog(parentWindow, "Сообщение", Dialog.ModalityType.APPLICATION_MODAL);
-        dialog.setUndecorated(true); // Убираем системный заголовок (белую полосу)
-
-        // Основная панель с рамкой
-        JPanel root = new JPanel(new BorderLayout());
-        root.setBorder(new LineBorder(getBorder(), 1));
-        root.setBackground(getPanel());
-
-        // --- 1. Кастомный заголовок ---
-        JPanel titleBar = new JPanel(new BorderLayout());
-        titleBar.setBackground(getPanel());
-        titleBar.setPreferredSize(new Dimension(300, 30));
-        titleBar.setBorder(new EmptyBorder(0, 10, 0, 0));
-
-        JLabel titleLbl = new JLabel("Сообщение");
-        titleLbl.setFont(new Font("SansSerif", Font.BOLD, 12));
-        titleLbl.setForeground(getText());
-
-        JButton closeBtn = new JButton("X");
-        closeBtn.setFocusPainted(false);
-        closeBtn.setBorderPainted(false);
-        closeBtn.setContentAreaFilled(false);
-        closeBtn.setOpaque(true);
-        closeBtn.setBackground(getPanel());
-        closeBtn.setForeground(getText());
-        closeBtn.setPreferredSize(new Dimension(40, 30));
-        closeBtn.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { closeBtn.setBackground(new Color(232, 17, 35)); closeBtn.setForeground(Color.WHITE); }
-            public void mouseExited(MouseEvent e) { closeBtn.setBackground(getPanel()); closeBtn.setForeground(getText()); }
-        });
-        closeBtn.addActionListener(e -> dialog.dispose());
-
-        titleBar.add(titleLbl, BorderLayout.WEST);
-        titleBar.add(closeBtn, BorderLayout.EAST);
-
-        // Логика перетаскивания окна
-        MouseAdapter dragListener = new MouseAdapter() {
-            int pX, pY;
-            public void mousePressed(MouseEvent e) { pX = e.getX(); pY = e.getY(); }
-            public void mouseDragged(MouseEvent e) {
-                dialog.setLocation(dialog.getLocation().x + e.getX() - pX, dialog.getLocation().y + e.getY() - pY);
-            }
-        };
-        titleBar.addMouseListener(dragListener);
-        titleBar.addMouseMotionListener(dragListener);
-
-        // --- 2. Текст сообщения (БЕЗ ИКОНКИ) ---
-        JTextArea area = new JTextArea(message);
-        area.setEditable(false);
-        area.setLineWrap(true);
-        area.setWrapStyleWord(true);
-        area.setFont(new Font("Arial", Font.PLAIN, 14));
-        area.setBackground(getPanel());
-        area.setForeground(getText());
-        area.setBorder(new EmptyBorder(20, 20, 20, 20));
-
-        // --- 3. Кнопка OK ---
-        JButton okBtn = new JButton("OK");
-        okBtn.setFont(new Font("Arial", Font.BOLD, 12));
-        okBtn.setForeground(getText());
-        okBtn.setBackground(getButton());
-        okBtn.setFocusPainted(false);
-        okBtn.setContentAreaFilled(false);
-        okBtn.setOpaque(true);
-        okBtn.setBorder(new CompoundBorder(new LineBorder(getBorder()), new EmptyBorder(5, 20, 5, 20)));
-        okBtn.addActionListener(e -> dialog.dispose());
-
-        // Ховер эффект для кнопки OK
-        okBtn.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { okBtn.setBackground(getButtonHover()); }
-            public void mouseExited(MouseEvent e) { okBtn.setBackground(getButton()); }
-        });
-
-        JPanel btnPanel = new JPanel();
-        btnPanel.setBackground(getPanel());
-        btnPanel.setBorder(new EmptyBorder(0, 0, 15, 0));
-        btnPanel.add(okBtn);
-
-        // Сборка
-        root.add(titleBar, BorderLayout.NORTH);
-        root.add(area, BorderLayout.CENTER);
-        root.add(btnPanel, BorderLayout.SOUTH);
-
-        dialog.setContentPane(root);
-        dialog.setSize(400, 200);
-        dialog.setLocationRelativeTo(parent);
-        dialog.setVisible(true);
     }
 
     public static void apply(Container container) {
@@ -186,9 +92,9 @@ public class Theme {
                     @Override
                     public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                         Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                        c.setBackground(Theme.getPanel());
-                        c.setForeground(Theme.getText());
-                        setBorder(BorderFactory.createMatteBorder(0, 0, 1, 1, Theme.getBorder()));
+                        c.setBackground(ThemeManager.getPanel());
+                        c.setForeground(ThemeManager.getText());
+                        setBorder(BorderFactory.createMatteBorder(0, 0, 1, 1, ThemeManager.getBorder()));
                         return c;
                     }
                 });

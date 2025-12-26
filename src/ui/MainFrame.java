@@ -29,7 +29,7 @@ public class MainFrame extends JFrame {
         setContentPane(root);
 
         // Рамка вокруг окна (так как системной нет)
-        root.setBorder(new LineBorder(Theme.getBorder(), 1));
+        root.setBorder(new LineBorder(ThemeManager.getBorder(), 1));
 
         // 1. Заголовок
         add(new CustomTitleBar(this), BorderLayout.NORTH);
@@ -56,6 +56,6 @@ public class MainFrame extends JFrame {
         add(tabs, BorderLayout.CENTER);
 
         // Первичная покраска
-        Theme.apply(this);
+        ThemeManager.apply(this);
     }
 }

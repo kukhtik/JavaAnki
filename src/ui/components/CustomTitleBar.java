@@ -1,6 +1,6 @@
 package ui.components;
 
-import ui.Theme;
+import ui.ThemeManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -33,10 +33,10 @@ public class CustomTitleBar extends JPanel {
 
         // Кнопка Темы (Сделали шире: 80px)
         var themeBtn = createBarButton("Theme", e -> {
-            Theme.toggle();
-            Theme.apply(parent);
+            ThemeManager.toggle();
+            ThemeManager.apply(parent);
             parent.repaint();
-            LOGGER.info("Тема переключена: " + (Theme.isDark() ? "Dark" : "Light"));
+            LOGGER.info("Тема переключена: " + (ThemeManager.isDark() ? "Dark" : "Light"));
         });
         themeBtn.setPreferredSize(new Dimension(80, 35));
 
@@ -56,8 +56,8 @@ public class CustomTitleBar extends JPanel {
             }
             @Override
             public void mouseExited(MouseEvent e) {
-                closeBtn.setBackground(Theme.getPanel());
-                closeBtn.setForeground(Theme.getText());
+                closeBtn.setBackground(ThemeManager.getPanel());
+                closeBtn.setForeground(ThemeManager.getText());
                 closeBtn.setOpaque(false);
             }
         });
@@ -67,7 +67,7 @@ public class CustomTitleBar extends JPanel {
         buttonPanel.add(closeBtn);
         add(buttonPanel, BorderLayout.EAST);
 
-        setBackground(Theme.getPanel());
+        setBackground(ThemeManager.getPanel());
     }
 
     private JButton createBarButton(String text, java.awt.event.ActionListener action) {
@@ -78,7 +78,7 @@ public class CustomTitleBar extends JPanel {
         btn.setContentAreaFilled(false);
         btn.setOpaque(false);
         btn.setFont(new Font("SansSerif", Font.BOLD, 12));
-        btn.setForeground(Theme.getText());
+        btn.setForeground(ThemeManager.getText());
         btn.addActionListener(action);
         return btn;
     }

@@ -4,7 +4,7 @@ import data.repository.*;
 import service.StudyService;
 import service.session.SessionManager; // NEW
 import ui.MainFrame;
-import ui.Theme;
+import ui.ThemeManager;
 
 import javax.swing.*;
 import java.util.logging.Logger;
@@ -16,7 +16,7 @@ public class App {
         SwingUtilities.invokeLater(() -> {
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                Theme.setupGlobal();
+                ThemeManager.setupGlobal();
             } catch (Exception ignored) {}
 
             LOGGER.info("=== ЗАПУСК ПРИЛОЖЕНИЯ ===");

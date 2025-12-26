@@ -1,6 +1,6 @@
 package ui.components;
 
-import ui.Theme;
+import ui.ThemeManager;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -22,14 +22,14 @@ public class UIFactory {
         btn.setOpaque(true);
 
         // Устанавливаем начальный цвет
-        btn.setBackground(Theme.getButton());
-        btn.setForeground(Theme.getText());
+        btn.setBackground(ThemeManager.getButton());
+        btn.setForeground(ThemeManager.getText());
 
         btn.addActionListener(action);
         btn.setPreferredSize(new Dimension(200, 45));
 
         btn.setBorder(new CompoundBorder(
-                new LineBorder(Theme.getBorder(), 1),
+                new LineBorder(ThemeManager.getBorder(), 1),
                 new EmptyBorder(5, 15, 5, 15)
         ));
 
@@ -38,14 +38,14 @@ public class UIFactory {
             @Override
             public void mouseEntered(MouseEvent e) {
                 // При наведении делаем чуть светлее
-                btn.setBackground(Theme.getButtonHover());
+                btn.setBackground(ThemeManager.getButtonHover());
                 btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
                 // Возвращаем базовый цвет
-                btn.setBackground(Theme.getButton());
+                btn.setBackground(ThemeManager.getButton());
                 btn.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
             }
         });
