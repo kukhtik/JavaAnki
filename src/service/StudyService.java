@@ -1,9 +1,6 @@
 package service;
 
-import data.repository.DeckRepository;
-import data.repository.GroupRepository;
-import data.repository.HistoryRepository;
-import data.repository.StatsRepository;
+import data.repository.*;
 import lombok.Getter;
 import model.Card;
 import util.TextUtil;
@@ -15,35 +12,43 @@ import java.util.stream.Collectors;
 public class StudyService {
     private static final Logger LOGGER = Logger.getLogger(StudyService.class.getName());
 
-    private final DeckRepository deckRepo = new DeckRepository();
-    private final StatsRepository statsRepo = new StatsRepository();
-    private final HistoryRepository historyRepo = new HistoryRepository();
-    private final GroupRepository groupRepo = new GroupRepository();
+    // Используем ИНТЕРФЕЙСЫ, а не конкретные классы
+    private final CardRepository deckRepo;
+    private final StatsRepository statsRepo;
 
-    private final GradingService gradingService = new GradingService();
+    // Эти пока оставим конкретными, чтобы не усложнять всё сразу,
+    // но по-хорошему их тоже надо через интерфейсы
+    private final HistoryRepository historyRepo;
+    private final GroupRepository groupRepo;
+
+    private final GradingService gradingService;
     private final Random random = new Random();
 
     @Getter private List<Card> allCards = new ArrayList<>();
     private List<Card> activeDeck = new ArrayList<>();
-
     @Getter private Card currentCard;
 
-    public StudyService() {
+    // КОНСТРУКТОР С ВНЕДРЕНИЕМ ЗАВИСИМОСТЕЙ (DI)
+    public StudyService(CardRepository deckRepo,
+                        StatsRepository statsRepo,
+                        HistoryRepository historyRepo,
+                        GroupRepository groupRepo) {
+        this.deckRepo = deckRepo;
+        this.statsRepo = statsRepo;
+        this.historyRepo = historyRepo;
+        this.groupRepo = groupRepo;
+        this.gradingService = new GradingService();
+
         reloadSession();
     }
 
-    /**
-     * Основной метод загрузки.
-     * Выполняет миграцию на UUID и дедупликацию.
-     */
     public void reloadSession() {
-        LOGGER.info(">>> ЗАПУСК СЕССИИ (UUID SYSTEM)...");
+        LOGGER.info(">>> ЗАПУСК СЕССИИ (DI ENABLED)...");
 
-        List<Card> rawCards = deckRepo.loadAllCards();
-        Map<String, Integer> stats = statsRepo.loadStats();
+        List<Card> rawCards = deckRepo.loadAllCards(); // Вызов через интерфейс
+        Map<String, Integer> stats = statsRepo.loadStats(); // Вызов через интерфейс
         groupRepo.loadStructure();
 
-        // Сет для отслеживания текстовых дубликатов
         Set<String> seenContentHashes = new HashSet<>();
         this.allCards = new ArrayList<>();
 
@@ -51,28 +56,24 @@ public class StudyService {
         int duplicatesSkipped = 0;
 
         for (Card c : rawCards) {
-            // 1. Дедупликация по тексту вопроса
             String contentHash = TextUtil.normalizeForId(c.getQuestion());
 
             if (seenContentHashes.contains(contentHash)) {
-                // Если мы уже загрузили такой вопрос в этой сессии - пропускаем
                 duplicatesSkipped++;
                 continue;
             }
             seenContentHashes.add(contentHash);
 
-            // 2. Поиск статистики (Миграция)
             boolean foundStat = false;
 
-            // А) Сначала ищем по UUID (если карта уже обновлена)
             if (c.getId() != null && stats.containsKey(c.getId())) {
                 c.setLevel(stats.get(c.getId()));
                 c.setNew(false);
                 foundStat = true;
-            }
-            // Б) Если по UUID не нашли, ищем по старому хэшу текста (для старых карт)
-            else {
-                String legacyId = statsRepo.generateLegacyId(c.getQuestion());
+            } else {
+                // Логика генерации Legacy ID переехала сюда (или в TextUtil),
+                // так как Репозиторий должен быть "глупым".
+                String legacyId = String.valueOf(TextUtil.normalizeForId(c.getQuestion()).hashCode());
                 if (stats.containsKey(legacyId)) {
                     c.setLevel(stats.get(legacyId));
                     c.setNew(false);
@@ -80,7 +81,6 @@ public class StudyService {
                 }
             }
 
-            // Если статистики нет нигде - карта новая
             if (!foundStat) {
                 c.setLevel(0);
                 c.setNew(true);
@@ -90,9 +90,7 @@ public class StudyService {
             this.allCards.add(c);
         }
 
-        // 3. ПЕРЕЗАПИСЬ ФАЙЛОВ (Закрепление UUID)
-        // Мы группируем карты обратно по файлам и перезаписываем их.
-        // Это гарантирует, что если у карты не было ID в файле, он там появится.
+        // Перезапись файлов через интерфейс
         Map<String, List<Card>> cardsByFile = allCards.stream()
                 .collect(Collectors.groupingBy(Card::getSourceFile));
 
@@ -100,42 +98,35 @@ public class StudyService {
             deckRepo.saveDeck(entry.getKey(), entry.getValue());
         }
 
-        // 4. Сохраняем статистику в новом формате (UUID -> Level)
         statsRepo.saveStats(allCards);
 
         LOGGER.info("=== ИТОГ ЗАГРУЗКИ ===");
-        LOGGER.info(String.format("Загружено карт: %d", allCards.size()));
-        LOGGER.info(String.format("Дубликатов пропущено: %d", duplicatesSkipped));
-        LOGGER.info(String.format("Статистики подтянуто: %d", statsRestored));
-        LOGGER.info("Все файлы колод обновлены (UUID закреплены).");
+        LOGGER.info("Загружено карт: " + allCards.size());
+        LOGGER.info("Дубликатов: " + duplicatesSkipped);
+        LOGGER.info("Восстановлено статистики: " + statsRestored);
 
         resetFilter();
     }
 
-    // --- ФИЛЬТРАЦИЯ ---
+    // --- ОСТАЛЬНЫЕ МЕТОДЫ (Без изменений) ---
 
     public void setFilter(String selectedItem) {
         if (selectedItem == null || selectedItem.equals("ВСЕ ТЕМЫ")) {
             resetFilter();
-            LOGGER.info("Фильтр: ВСЕ ТЕМЫ (Карт: " + activeDeck.size() + ")");
         } else {
             if (groupRepo.getGroupNames().contains(selectedItem)) {
                 activeDeck = allCards.stream()
                         .filter(c -> groupRepo.isCardInGroup(c.getSourceFile(), selectedItem))
                         .collect(Collectors.toList());
-                LOGGER.info("Фильтр ГРУППА [" + selectedItem + "]: " + activeDeck.size());
             } else {
                 activeDeck = allCards.stream()
                         .filter(c -> c.getCategory().equals(selectedItem))
                         .collect(Collectors.toList());
-                LOGGER.info("Фильтр КАТЕГОРИЯ [" + selectedItem + "]: " + activeDeck.size());
             }
         }
     }
 
-    public void resetFilter() {
-        this.activeDeck = new ArrayList<>(allCards);
-    }
+    public void resetFilter() { this.activeDeck = new ArrayList<>(allCards); }
 
     public List<String> getAvailableCategories() {
         List<String> options = new ArrayList<>(groupRepo.getGroupNames());
@@ -144,8 +135,6 @@ public class StudyService {
         options.addAll(cats);
         return options;
     }
-
-    // --- SRS ЛОГИКА ---
 
     public Card nextCard(boolean isShuffle) {
         if (activeDeck.isEmpty()) return null;
@@ -177,10 +166,7 @@ public class StudyService {
             if (currentCard.getLevel() > 5) currentCard.setLevel(2);
             else currentCard.setLevel(0);
         }
-
         historyRepo.saveEntry(currentCard.getQuestion(), userAnswer, correct);
-
-        // Сохраняем статистику по UUID
         statsRepo.saveStats(allCards);
     }
 

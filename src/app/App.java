@@ -1,5 +1,6 @@
 package app;
 
+import data.repository.*;
 import service.StudyService;
 import ui.MainFrame;
 import ui.Theme;
@@ -13,18 +14,25 @@ public class App {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             try {
-                // Сначала системный стиль, чтобы рамки окон были родные
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                // А ПОВЕРХ накатываем наши цвета для компонентов
                 Theme.setupGlobal();
             } catch (Exception ignored) {}
 
-            LOGGER.info("<<<< ЗАПУСК ПРИЛОЖЕНИЯ >>>>");
-            StudyService studyService = new StudyService();
+            LOGGER.info("=== ЗАПУСК ПРИЛОЖЕНИЯ (Сборка зависимостей) ===");
 
-            int count = studyService.getAllCards().size();
-            LOGGER.info("Система инициализирована. Всего карт в базе: " + count);
+            // 1. Создаем конкретные реализации репозиториев (Работа с файлами)
+            CardRepository cardRepo = new FileDeckRepository();
+            StatsRepository statsRepo = new FileStatsRepository();
+            HistoryRepository historyRepo = new HistoryRepository();
+            GroupRepository groupRepo = new GroupRepository();
 
+            // 2. Внедряем зависимости в Сервис (Dependency Injection)
+            // Сервис не знает, что мы используем файлы. Ему дали интерфейсы.
+            StudyService studyService = new StudyService(cardRepo, statsRepo, historyRepo, groupRepo);
+
+            LOGGER.info("Сервис собран. Карт: " + studyService.getAllCards().size());
+
+            // 3. Запускаем UI
             new MainFrame(studyService).setVisible(true);
         });
     }
