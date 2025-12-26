@@ -22,29 +22,34 @@ public class DeckRepository {
     }
 
     public List<Card> loadAllCards() {
-        LOGGER.info("Начало загрузки карт из папки: " + DECKS_DIR);
+        LOGGER.info(">>> НАЧАЛО ЗАГРУЗКИ КОЛОД (папка " + DECKS_DIR + ")");
+        List<Card> allCards = new ArrayList<>();
+
         try (Stream<Path> paths = Files.walk(Paths.get(DECKS_DIR))) {
-            List<Card> all = paths
+            List<Path> fileList = paths
                     .filter(Files::isRegularFile)
                     .filter(p -> p.toString().endsWith(".txt"))
-                    .flatMap(this::parseFile)
-                    .toList();
+                    .toList(); // Собираем список файлов
 
-            LOGGER.info("Загрузка завершена. Всего карт найдено: " + all.size());
-            return all;
+            for (Path path : fileList) {
+                List<Card> fromFile = parseFile(path);
+                allCards.addAll(fromFile);
+            }
+
+            LOGGER.info(">>> ЗАГРУЗКА ЗАВЕРШЕНА. Найдено сырых карт: " + allCards.size());
+            return allCards;
         } catch (Exception e) {
             LOGGER.severe("Критическая ошибка чтения decks: " + e.getMessage());
             return new ArrayList<>();
         }
     }
 
-    private Stream<Card> parseFile(Path path) {
-        LOGGER.info("Читаю файл: " + path.getFileName());
+    private List<Card> parseFile(Path path) {
         List<String> lines = fileService.readAllLines(path);
         List<Card> cards = new ArrayList<>();
 
         String fileName = path.getFileName().toString();
-        String currentCat = fileName.replace(".txt", ""); // По умолчанию имя файла
+        String currentCat = fileName.replace(".txt", "");
         StringBuilder qBuf = new StringBuilder();
         StringBuilder aBuf = new StringBuilder();
         int state = 0;
@@ -69,6 +74,8 @@ public class DeckRepository {
             cards.add(new Card(currentCat, qBuf.toString().trim(), aBuf.toString().trim(), fileName));
         }
 
-        return cards.stream();
+        // ЛОГИРОВАНИЕ ПО ФАЙЛУ
+        LOGGER.info(String.format("Файл: %-25s | Найдено карт: %d", fileName, cards.size()));
+        return cards;
     }
 }

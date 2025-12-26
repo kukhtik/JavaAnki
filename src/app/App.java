@@ -2,36 +2,29 @@ package app;
 
 import service.StudyService;
 import ui.MainFrame;
+import ui.Theme;
 
 import javax.swing.*;
+import java.util.logging.Logger;
 
-/**
- * Вход
- * <ul>
- *     <li>установка системного LookAndFeel</li>
- *     <li>запуск Swing-приложения в UI-потоке</li>
- *     <li>инициализация сервисного слоя ({@link StudyService})</li>
- *     <li>создание главного окна ({@link MainFrame})</li>
- * </ul>
- */
 public class App {
+    private static final Logger LOGGER = Logger.getLogger(App.class.getName());
 
-    /**
-     * Главный метод запуска приложения
-     */
     public static void main(String[] args) {
-
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {}
-
-        // запуск UI в Event Dispatch Thread
         SwingUtilities.invokeLater(() -> {
+            try {
+                // Сначала системный стиль, чтобы рамки окон были родные
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                // А ПОВЕРХ накатываем наши цвета для компонентов
+                Theme.setupGlobal();
+            } catch (Exception ignored) {}
 
-            // сервис обучения (бизнес-логика)
+            LOGGER.info("<<<< ЗАПУСК ПРИЛОЖЕНИЯ >>>>");
             StudyService studyService = new StudyService();
 
-            // главное окно и передаём ему сервис
+            int count = studyService.getAllCards().size();
+            LOGGER.info("Система инициализирована. Всего карт в базе: " + count);
+
             new MainFrame(studyService).setVisible(true);
         });
     }
