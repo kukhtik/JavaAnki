@@ -8,7 +8,12 @@ import model.Card;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
+/**
+ * Основной сервис обучающей системы
+ * <p>
+ * Отвечает за загрузку карточек, применение статистики, выбор следующей карточки,
+ * проверку ответов и фиксацию результатов. Является центральным элементом
+ */
 public class StudyService {
     private final DeckRepository deckRepo = new DeckRepository();
     private final StatsRepository statsRepo = new StatsRepository();
