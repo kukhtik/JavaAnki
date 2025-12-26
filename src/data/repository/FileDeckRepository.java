@@ -2,6 +2,7 @@ package data.repository;
 
 import data.FileService;
 import model.Card;
+import util.CardParser; // Используем наш парсер
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -11,7 +12,6 @@ import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
-// IMPLEMENTS Interface
 public class FileDeckRepository implements CardRepository {
     private static final Logger LOGGER = Logger.getLogger(FileDeckRepository.class.getName());
     private static final String DECKS_DIR = "decks";
@@ -34,11 +34,16 @@ public class FileDeckRepository implements CardRepository {
                     .toList();
 
             for (Path path : fileList) {
-                allCards.addAll(parseFile(path));
+                // ДЕЛЕГИРУЕМ ПАРСИНГ
+                List<String> lines = fileService.readAllLines(path);
+                String fileName = path.getFileName().toString();
+
+                List<Card> cardsFromFile = CardParser.parseAll(lines, fileName);
+                allCards.addAll(cardsFromFile);
             }
             return allCards;
         } catch (Exception e) {
-            LOGGER.severe("Критическая ошибка чтения decks: " + e.getMessage());
+            LOGGER.severe("Ошибка чтения decks: " + e.getMessage());
             return new ArrayList<>();
         }
     }
@@ -60,41 +65,7 @@ public class FileDeckRepository implements CardRepository {
             Files.writeString(path, sb.toString(), StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         } catch (IOException e) {
-            LOGGER.severe("Ошибка записи файла " + fileName + ": " + e.getMessage());
+            LOGGER.severe("Ошибка записи " + fileName + ": " + e.getMessage());
         }
-    }
-
-    private List<Card> parseFile(Path path) {
-        List<String> lines = fileService.readAllLines(path);
-        List<Card> cards = new ArrayList<>();
-        String fileName = path.getFileName().toString();
-        String currentCat = fileName.replace(".txt", "");
-
-        StringBuilder qBuf = new StringBuilder();
-        StringBuilder aBuf = new StringBuilder();
-        String currentId = null;
-        int state = 0;
-
-        for (String rawLine : lines) {
-            String line = rawLine.replace("\uFEFF", "").trim();
-            if (line.equals("===")) {
-                if (qBuf.length() > 0 && aBuf.length() > 0) {
-                    cards.add(new Card(currentId, currentCat, qBuf.toString().trim(), aBuf.toString().trim(), fileName));
-                }
-                qBuf.setLength(0); aBuf.setLength(0); currentId = null; state = 0; continue;
-            }
-            if (line.startsWith("ID:")) currentId = line.substring(3).trim();
-            else if (line.startsWith("CATEGORY:")) { currentCat = line.substring(9).trim(); state = 0; }
-            else if (line.startsWith("QUESTION:")) state = 1;
-            else if (line.startsWith("ANSWER:")) state = 2;
-            else {
-                if (state == 1) qBuf.append(rawLine).append("\n");
-                else if (state == 2) aBuf.append(rawLine).append("\n");
-            }
-        }
-        if (qBuf.length() > 0 && aBuf.length() > 0) {
-            cards.add(new Card(currentId, currentCat, qBuf.toString().trim(), aBuf.toString().trim(), fileName));
-        }
-        return cards;
     }
 }

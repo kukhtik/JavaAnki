@@ -3,6 +3,7 @@ package service;
 import data.repository.*;
 import lombok.Getter;
 import model.Card;
+import util.EventBus; // Шина событий
 import util.TextUtil;
 
 import java.util.*;
@@ -12,12 +13,9 @@ import java.util.stream.Collectors;
 public class StudyService {
     private static final Logger LOGGER = Logger.getLogger(StudyService.class.getName());
 
-    // Используем ИНТЕРФЕЙСЫ, а не конкретные классы
+    // Используем интерфейсы для DI
     private final CardRepository deckRepo;
     private final StatsRepository statsRepo;
-
-    // Эти пока оставим конкретными, чтобы не усложнять всё сразу,
-    // но по-хорошему их тоже надо через интерфейсы
     private final HistoryRepository historyRepo;
     private final GroupRepository groupRepo;
 
@@ -26,9 +24,10 @@ public class StudyService {
 
     @Getter private List<Card> allCards = new ArrayList<>();
     private List<Card> activeDeck = new ArrayList<>();
+
     @Getter private Card currentCard;
 
-    // КОНСТРУКТОР С ВНЕДРЕНИЕМ ЗАВИСИМОСТЕЙ (DI)
+    // Конструктор с внедрением зависимостей
     public StudyService(CardRepository deckRepo,
                         StatsRepository statsRepo,
                         HistoryRepository historyRepo,
@@ -42,11 +41,18 @@ public class StudyService {
         reloadSession();
     }
 
+    /**
+     * Основной метод загрузки.
+     * 1. Загружает карты через Репозиторий (который использует CardParser).
+     * 2. Выполняет миграцию (связывает старые карты с прогрессом).
+     * 3. Перезаписывает файлы, чтобы закрепить UUID.
+     * 4. Публикует событие обновления.
+     */
     public void reloadSession() {
-        LOGGER.info(">>> ЗАПУСК СЕССИИ (DI ENABLED)...");
+        LOGGER.info(">>> ЗАПУСК СЕССИИ (SERVICE RELOAD)...");
 
-        List<Card> rawCards = deckRepo.loadAllCards(); // Вызов через интерфейс
-        Map<String, Integer> stats = statsRepo.loadStats(); // Вызов через интерфейс
+        List<Card> rawCards = deckRepo.loadAllCards();
+        Map<String, Integer> stats = statsRepo.loadStats();
         groupRepo.loadStructure();
 
         Set<String> seenContentHashes = new HashSet<>();
@@ -56,6 +62,7 @@ public class StudyService {
         int duplicatesSkipped = 0;
 
         for (Card c : rawCards) {
+            // 1. Дедупликация по тексту
             String contentHash = TextUtil.normalizeForId(c.getQuestion());
 
             if (seenContentHashes.contains(contentHash)) {
@@ -64,15 +71,18 @@ public class StudyService {
             }
             seenContentHashes.add(contentHash);
 
+            // 2. Поиск статистики (Миграция)
             boolean foundStat = false;
 
+            // А) Ищем по UUID (если карта уже имеет ID)
             if (c.getId() != null && stats.containsKey(c.getId())) {
                 c.setLevel(stats.get(c.getId()));
                 c.setNew(false);
                 foundStat = true;
-            } else {
-                // Логика генерации Legacy ID переехала сюда (или в TextUtil),
-                // так как Репозиторий должен быть "глупым".
+            }
+            // Б) Ищем по старому хэшу текста (если карта старая)
+            else {
+                // ВАЖНО: Мы генерируем легаси-ID тут, так как это бизнес-логика миграции
                 String legacyId = String.valueOf(TextUtil.normalizeForId(c.getQuestion()).hashCode());
                 if (stats.containsKey(legacyId)) {
                     c.setLevel(stats.get(legacyId));
@@ -90,7 +100,7 @@ public class StudyService {
             this.allCards.add(c);
         }
 
-        // Перезапись файлов через интерфейс
+        // 3. Закрепление UUID (Перезапись файлов)
         Map<String, List<Card>> cardsByFile = allCards.stream()
                 .collect(Collectors.groupingBy(Card::getSourceFile));
 
@@ -98,35 +108,44 @@ public class StudyService {
             deckRepo.saveDeck(entry.getKey(), entry.getValue());
         }
 
+        // 4. Сохранение обновленной статистики
         statsRepo.saveStats(allCards);
 
-        LOGGER.info("=== ИТОГ ЗАГРУЗКИ ===");
-        LOGGER.info("Загружено карт: " + allCards.size());
-        LOGGER.info("Дубликатов: " + duplicatesSkipped);
-        LOGGER.info("Восстановлено статистики: " + statsRestored);
+        LOGGER.info("=== ИТОГ ===");
+        LOGGER.info("Всего карт: " + allCards.size());
+        LOGGER.info("Дубликатов скрыто: " + duplicatesSkipped);
+        LOGGER.info("Прогресс восстановлен для: " + statsRestored);
 
         resetFilter();
+
+        // 5. Уведомляем UI (Observer Pattern)
+        EventBus.publish(EventBus.Topic.DATA_UPDATED);
     }
 
-    // --- ОСТАЛЬНЫЕ МЕТОДЫ (Без изменений) ---
+    // --- ФИЛЬТРАЦИЯ ---
 
     public void setFilter(String selectedItem) {
         if (selectedItem == null || selectedItem.equals("ВСЕ ТЕМЫ")) {
             resetFilter();
+            LOGGER.info("Фильтр: ВСЕ ТЕМЫ (" + activeDeck.size() + ")");
         } else {
             if (groupRepo.getGroupNames().contains(selectedItem)) {
                 activeDeck = allCards.stream()
                         .filter(c -> groupRepo.isCardInGroup(c.getSourceFile(), selectedItem))
                         .collect(Collectors.toList());
+                LOGGER.info("Фильтр ГРУППА [" + selectedItem + "]: " + activeDeck.size());
             } else {
                 activeDeck = allCards.stream()
                         .filter(c -> c.getCategory().equals(selectedItem))
                         .collect(Collectors.toList());
+                LOGGER.info("Фильтр КАТЕГОРИЯ [" + selectedItem + "]: " + activeDeck.size());
             }
         }
     }
 
-    public void resetFilter() { this.activeDeck = new ArrayList<>(allCards); }
+    public void resetFilter() {
+        this.activeDeck = new ArrayList<>(allCards);
+    }
 
     public List<String> getAvailableCategories() {
         List<String> options = new ArrayList<>(groupRepo.getGroupNames());
@@ -135,6 +154,8 @@ public class StudyService {
         options.addAll(cats);
         return options;
     }
+
+    // --- SRS ЛОГИКА ---
 
     public Card nextCard(boolean isShuffle) {
         if (activeDeck.isEmpty()) return null;
@@ -166,8 +187,9 @@ public class StudyService {
             if (currentCard.getLevel() > 5) currentCard.setLevel(2);
             else currentCard.setLevel(0);
         }
+
         historyRepo.saveEntry(currentCard.getQuestion(), userAnswer, correct);
-        statsRepo.saveStats(allCards);
+        statsRepo.saveStats(allCards); // Сохраняем прогресс сразу
     }
 
     private double calculateWeight(Card c) {

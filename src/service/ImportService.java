@@ -1,6 +1,8 @@
 package service;
 
 import data.FileService;
+import model.Card;
+import util.CardParser;
 import util.TextUtil;
 
 import java.nio.file.Path;
@@ -23,10 +25,7 @@ public class ImportService {
     }
 
     public String performImport() {
-        // 1. Принудительная перезагрузка перед импортом
-        // Это гарантирует, что мы знаем актуальное состояние файлов на диске (вдруг пользователь удалил файл)
-        // И также гарантирует, что у всех карт в памяти уже есть UUID
-        studyService.reloadSession();
+        studyService.reloadSession(); // Обновляем состояние перед импортом
 
         Path importPath = Paths.get(IMPORT_FILE);
         if (!Files.exists(importPath)) return "Файл import.txt не найден.";
@@ -34,10 +33,9 @@ public class ImportService {
         List<String> lines = fileService.readAllLines(importPath);
         if (lines.isEmpty()) return "Файл import.txt пуст.";
 
-        // Загружаем существующие хэши текстов (чтобы не добавить дубликат по смыслу)
-        Set<String> existingContentHashes = new HashSet<>();
+        Set<String> existingHashes = new HashSet<>();
         studyService.getAllCards().forEach(c ->
-                existingContentHashes.add(TextUtil.normalizeForId(c.getQuestion()))
+                existingHashes.add(TextUtil.normalizeForId(c.getQuestion()))
         );
 
         List<String> linesToKeep = new ArrayList<>();
@@ -48,10 +46,9 @@ public class ImportService {
         int errors = 0;
 
         for (String line : lines) {
-            String tr = line.trim();
-            if (tr.equals("===")) {
+            if (line.trim().equals("===")) {
                 if (!currentBlock.isEmpty()) {
-                    int res = processBlock(currentBlock, existingContentHashes);
+                    int res = processBlock(currentBlock, existingHashes);
                     if (res == 1) added++;
                     else if (res == 2) skipped++;
                     else {
@@ -65,7 +62,6 @@ public class ImportService {
                 currentBlock.add(line);
             }
         }
-        // Обработка последнего блока, если нет === в конце
         if (!currentBlock.isEmpty()) {
             if (currentBlock.stream().anyMatch(s -> !s.trim().isEmpty())) {
                 linesToKeep.addAll(currentBlock);
@@ -75,7 +71,6 @@ public class ImportService {
 
         fileService.ensureDirectory(Paths.get(DECKS_DIR));
 
-        // Перезаписываем import.txt (удаляем успешно импортированные)
         try {
             if (linesToKeep.isEmpty()) {
                 Files.write(importPath, new byte[0], StandardOpenOption.TRUNCATE_EXISTING);
@@ -83,55 +78,33 @@ public class ImportService {
                 Files.write(importPath, linesToKeep, java.nio.charset.StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
             }
         } catch (Exception e) {
-            LOGGER.severe("Ошибка обновления import.txt: " + e.getMessage());
+            LOGGER.severe("Ошибка записи import.txt: " + e.getMessage());
         }
 
-        // Обновляем сессию, чтобы новые карты появились
+        // ВАЖНО: Service сам кинет событие DATA_UPDATED при перезагрузке
         studyService.reloadSession();
 
-        return String.format("Импорт завершен.\nДобавлено: %d\nПропущено (дубликаты): %d\nОшибок (осталось в файле): %d", added, skipped, errors);
+        return String.format("Импорт завершен.\nДобавлено: %d\nПропущено: %d\nОшибок: %d", added, skipped, errors);
     }
 
-    /**
-     * @return 1=Success, 2=Duplicate, 0=Error
-     */
     private int processBlock(List<String> buffer, Set<String> existingHashes) {
-        String cat = null, q = null, a = null;
-        StringBuilder qB = new StringBuilder();
-        StringBuilder aB = new StringBuilder();
-        int state = 0;
+        // ИСПОЛЬЗУЕМ ПАРСЕР
+        Card tempCard = CardParser.parseSingleBlock(buffer, "import_temp");
+        if (tempCard == null) return 0; // Ошибка формата
 
-        for (String line : buffer) {
-            String tr = line.trim();
-            if (tr.startsWith("CATEGORY:")) { cat = tr.substring(9).trim(); state = 0; }
-            else if (tr.startsWith("QUESTION:")) state = 1;
-            else if (tr.startsWith("ANSWER:")) state = 2;
-            else {
-                if (state == 1) qB.append(line).append("\n");
-                if (state == 2) aB.append(line).append("\n");
-            }
-        }
-        if (qB.length() > 0) q = qB.toString().trim();
-        if (aB.length() > 0) a = aB.toString().trim();
+        String contentHash = TextUtil.normalizeForId(tempCard.getQuestion());
+        if (existingHashes.contains(contentHash)) return 2; // Дубликат
 
-        if (cat == null || q == null || q.isEmpty() || a == null || a.isEmpty()) return 0;
-
-        // Проверяем дубликат по ТЕКСТУ вопроса
-        String contentHash = TextUtil.normalizeForId(q);
-        if (existingHashes.contains(contentHash)) return 2;
-
+        // Определяем имя файла
+        String cat = tempCard.getCategory();
         String safeName = cat.replaceAll("[^a-zA-Z0-9а-яА-Я ._-]", "");
         Path deckPath = Paths.get(DECKS_DIR, safeName + ".txt");
 
-        // ГЕНЕРИРУЕМ НОВЫЙ UUID
-        String newId = UUID.randomUUID().toString();
-
-        // Записываем карту с полем ID
+        // Формируем строку для записи (с новым UUID)
         String entry = String.format("ID: %s%nCATEGORY: %s%nQUESTION:%n%s%nANSWER:%n%s%n===%n",
-                newId, cat, q, a);
+                tempCard.getId(), tempCard.getCategory(), tempCard.getQuestion(), tempCard.getAnswer());
 
         fileService.appendLine(deckPath, entry);
-
         existingHashes.add(contentHash);
         return 1;
     }
