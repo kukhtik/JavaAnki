@@ -75,6 +75,3 @@
 2025-12-23 10:47:53 | Слияние двух отсортированных массивов в один отсортированный. | ublic static int[] merge(int[] a, int[] b){ int i = 0, j=0, k=0; int[] result = new int [a.lenght+b.lenght]; while (i<a.lenght&&j<b.lenght){ if (a[i] <= b[j]){ result[k++]=a[i++]; } } while(i<a.lenght){result[k++]=a[i++];} while(j<b.lenght){result[k++]=b[j++];} return result; } | ВЕРНО
 2025-12-23 11:01:57 | Проверить правильность расстановки скобок в строке "({[]})". | public class  boolean isValid(String s) {     Deque<Character> stack = new ArrayDeque<>();     for (char c : s.toCharArray()) {         if (c == '(' || c == '{' || c == '[') {             stack.push(c);         } else {             if (stack.isEmpty()) return false;             char open = stack.pop();             if ((c == ')' && open != '(') || (c == '}' && open != '{') || (c == ']'&& open != ']')){                 return false;             }         }     }     return stack.isEmpty(); } | ВЕРНО
 2025-12-23 11:03:32 | Какая сложность вставки в середину ArrayList? | O(n) нужно сдвинуть элементы на вправо | ВЕРНО
-2025-12-24 09:37:54 | Что такое "Чистая функция" (Pure Function)? |  | ОШИБКА
-2025-12-24 09:57:04 | Что такое coupling (связность) и cohesion (сцепление)? |  | ОШИБКА
-2025-12-24 12:55:15 | Найти первый неповторяющийся символ в строке. | укптвыаоитваыывщптщвыпты | ОШИБКА

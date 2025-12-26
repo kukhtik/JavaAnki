@@ -12,43 +12,35 @@ import java.awt.event.ActionEvent;
 public class StudyPanel extends JPanel {
     private final StudyService service;
 
-    private JComboBox<String> categoryBox; // NEW: Выбор темы
+    private JComboBox<String> categoryBox;
     private JTextArea questionArea, answerArea, inputArea;
     private JLabel infoLabel, feedbackLabel;
     private JPanel buttonPanel;
     private JButton checkBtn, yesBtn, noBtn;
 
     private boolean isShuffleMode = false;
-    private boolean isAnswerRevealed = false; // Нужно для логики клавиш
+    private boolean isAnswerRevealed = false;
 
     public StudyPanel(StudyService service) {
         this.service = service;
         setLayout(new BorderLayout());
         initUI();
-        setupKeys(); // NEW: Горячие клавиши
+        setupKeys();
+
+        // Загружаем первую карту явно в конце конструктора
         loadNextCard();
     }
 
     private void initUI() {
         // --- ВЕРХ: Настройки ---
         JPanel topContainer = new JPanel(new BorderLayout());
-
-        // Панель управления (Тема, Режим)
         JPanel controls = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
-        // Селектор категорий
+        // 1. Создаем комбобокс, но СЛУШАТЕЛЬ пока НЕ добавляем!
         categoryBox = new JComboBox<>();
-        categoryBox.addActionListener(e -> {
-            String cat = (String) categoryBox.getSelectedItem();
-            if (cat != null) {
-                service.setFilter(cat);
-                loadNextCard();
-                inputArea.requestFocusInWindow();
-            }
-        });
-        updateCategories(); // Заполнить список
+        categoryBox.setPreferredSize(new Dimension(200, 30));
 
-        JButton modeBtn = UIFactory.createButton("Mode: SMART", null); // Упрощенно
+        JButton modeBtn = UIFactory.createButton("Mode: SMART", null);
         modeBtn.setPreferredSize(new Dimension(120, 30));
         modeBtn.addActionListener(e -> {
             isShuffleMode = !isShuffleMode;
@@ -68,7 +60,7 @@ public class StudyPanel extends JPanel {
         topContainer.add(infoLabel, BorderLayout.SOUTH);
         add(topContainer, BorderLayout.NORTH);
 
-        // --- ЦЕНТР (тот же код, что был раньше) ---
+        // --- ЦЕНТР ---
         JPanel centerPanel = new JPanel(new GridLayout(3, 1, 10, 10));
         centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -90,12 +82,26 @@ public class StudyPanel extends JPanel {
         centerPanel.add(answerContainer);
         add(centerPanel, BorderLayout.CENTER);
 
-        // --- НИЗ ---
+        // --- НИЗ (Инициализируем buttonPanel) ---
         buttonPanel = new JPanel(new FlowLayout());
         checkBtn = UIFactory.createButton("Проверить [Enter]", e -> checkAnswer());
         yesBtn = UIFactory.createButton("ВЕРНО [→]", e -> submit(true));
         noBtn = UIFactory.createButton("ОШИБКА [←]", e -> submit(false));
         add(buttonPanel, BorderLayout.SOUTH);
+
+        // === FIX START: Настройка слушателей в самом конце ===
+        // Теперь buttonPanel и inputArea точно существуют, можно включать логику
+        updateCategories();
+
+        categoryBox.addActionListener(e -> {
+            String cat = (String) categoryBox.getSelectedItem();
+            if (cat != null) {
+                service.setFilter(cat);
+                loadNextCard();
+                inputArea.requestFocusInWindow();
+            }
+        });
+        // === FIX END ===
     }
 
     private void updateCategories() {
@@ -132,31 +138,36 @@ public class StudyPanel extends JPanel {
         });
     }
 
-    // Методы loadNextCard, checkAnswer, submit те же, но добавляем обновление флага
     private void loadNextCard() {
         isAnswerRevealed = false;
-        // ... (остальной код из предыдущего ответа)
         Card card = service.nextCard(isShuffleMode);
+
+        // Здесь раньше падала ошибка, теперь buttonPanel гарантированно инициализирована
         buttonPanel.removeAll();
         buttonPanel.add(checkBtn);
+
         inputArea.setText("");
         inputArea.setEditable(true);
         inputArea.setBackground(Theme.getInputBg());
+
         answerArea.setVisible(false);
         feedbackLabel.setText(" ");
 
         if (card == null) {
-            questionArea.setText("Нет карт.");
+            questionArea.setText("Нет карт в этой категории.");
             checkBtn.setEnabled(false);
+            infoLabel.setText("Пусто");
+            infoLabel.setBackground(Color.GRAY);
+            buttonPanel.revalidate(); buttonPanel.repaint();
             return;
         }
+
         checkBtn.setEnabled(true);
         questionArea.setText(card.getQuestion());
 
         String status = card.isNew() ? "НОВОЕ" : "LVL " + card.getLevel();
         infoLabel.setText(String.format("[%s] %s", card.getCategory(), status));
 
-        // Красим плашку статуса
         if (card.isNew()) infoLabel.setBackground(config.ThemeColors.STATUS_NEW);
         else if (card.getLevel() == 0) infoLabel.setBackground(config.ThemeColors.STATUS_ERROR);
         else if (card.getLevel() < 8) infoLabel.setBackground(config.ThemeColors.STATUS_LEARNING);
@@ -164,8 +175,8 @@ public class StudyPanel extends JPanel {
         infoLabel.setForeground(Color.WHITE);
 
         Theme.apply(this);
-        // Важно перекрасить InfoLabel обратно, так как apply сбросит его в дефолт
-        buttonPanel.revalidate(); buttonPanel.repaint();
+        buttonPanel.revalidate();
+        buttonPanel.repaint();
         inputArea.requestFocusInWindow();
     }
 
@@ -180,14 +191,13 @@ public class StudyPanel extends JPanel {
         answerArea.setVisible(true);
         inputArea.setEditable(false);
 
-        // Исправленный блок с цветами
         if (Theme.isDark()) {
             inputArea.setBackground(res.isPassed() ? new Color(40, 80, 40) : new Color(80, 40, 40));
         } else {
             inputArea.setBackground(res.isPassed() ? new Color(200, 255, 200) : new Color(255, 200, 200));
         }
 
-        feedbackLabel.setText(res.isPassed() ? "OK" : "TYPO");
+        feedbackLabel.setText(res.isPassed() ? "OK" : "TYPO / ОШИБКА");
 
         buttonPanel.removeAll();
         buttonPanel.add(noBtn);
