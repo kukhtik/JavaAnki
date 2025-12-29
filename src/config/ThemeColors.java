@@ -42,9 +42,6 @@ public class ThemeColors {
     /** Цвет ползунка скроллбара */
     public static final Color DARK_SCROLL_THUMB = new Color(80, 80, 80);
 
-    /** Основной цвет фона окна */
-    public static final Color LIGHT_BG = new Color(240, 240, 240);
-
     /** Цвет фона панелей */
     public static final Color LIGHT_PANEL = Color.WHITE;
 

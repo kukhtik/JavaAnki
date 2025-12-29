@@ -104,7 +104,7 @@ public class DialogFactory {
         btn.setForeground(ThemeManager.getText());
         btn.setPreferredSize(new Dimension(30, 20));
 
-        btn.addActionListener(e -> dialog.dispose());
+        btn.addActionListener(_ -> dialog.dispose());
 
         btn.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
@@ -130,7 +130,7 @@ public class DialogFactory {
         btn.setOpaque(true);
         btn.setBorder(new CompoundBorder(new LineBorder(ThemeManager.getBorder()), new EmptyBorder(8, 30, 8, 30)));
 
-        btn.addActionListener(e -> dialog.dispose());
+        btn.addActionListener(_ -> dialog.dispose());
 
         btn.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) { btn.setBackground(ThemeManager.getButtonHover()); }

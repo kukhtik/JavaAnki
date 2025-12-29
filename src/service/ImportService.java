@@ -5,10 +5,8 @@ import model.Card;
 import util.CardParser;
 import util.TextUtil;
 
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.logging.Logger;
