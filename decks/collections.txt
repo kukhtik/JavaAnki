@@ -1,3 +1,4 @@
+ID: 6af47b93-d404-4afe-989c-cf1a3f0e56e7
 CATEGORY: Collections
 QUESTION:
 Как работает HashSet под капотом?

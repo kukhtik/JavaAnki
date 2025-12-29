@@ -1,3 +1,4 @@
+ID: 70a935e1-d352-4095-92fc-a830ea5dacdb
 CATEGORY: Live Coding
 QUESTION:
 Напишите потокобезопасный счетчик (Thread-Safe Counter).
@@ -16,6 +17,7 @@ class CounterSync {
     public synchronized int get() { return count; }
 }
 ===
+ID: b846fc62-c00d-44cf-99a6-73ac28d8ee7e
 CATEGORY: Live Coding
 QUESTION:
 Реализуйте Singleton (Потокобезопасный).
@@ -39,6 +41,7 @@ class SingletonLazy {
     }
 }
 ===
+ID: 119e1e4f-09d7-4203-9e1a-61ccde613aa3
 CATEGORY: Live Coding
 QUESTION:
 Напишите код, вызывающий Deadlock.
@@ -63,6 +66,7 @@ public void deadlock() {
     t1.start(); t2.start();
 }
 ===
+ID: 2bc39ef7-f182-4c65-8efe-c9ed97666fec
 CATEGORY: Live Coding
 QUESTION:
 Задача на Stream API: Дан список строк. Оставить только те, длина которых > 5, привести к верхнему регистру, отсортировать и собрать в список.
@@ -72,8 +76,8 @@ List<String> result = list.stream()
     .map(String::toUpperCase)
     .sorted()
     .collect(Collectors.toList());
-
 ===
+ID: 0c85fddd-02ae-4de9-87dc-be857628a5ae
 CATEGORY: Live Coding
 QUESTION:
 Что выведет этот код? (HashMap и Mutable key).
@@ -86,11 +90,11 @@ Key k = new Key(1);
 map.put(k, "Value");
 k.id = 2; // Изменяем ключ
 System.out.println(map.get(k));
-
 ANSWER:
 null.
 Хэш-код объекта изменился. HashMap ищет бакет по новому хэшу, а объект лежит в бакете, соответствующем старому.
 ===
+ID: 63caeaac-1ea2-4d57-8e70-5b9c6187da32
 CATEGORY: Live Coding
 QUESTION:
 Реализовать простейший LRU Cache (Least Recently Used) с фиксированным размером.
@@ -114,6 +118,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
     }
 }
 ===
+ID: 079de9d3-1852-4576-8a0c-8e74056fddce
 CATEGORY: Live Coding
 QUESTION:
 Задача: Подсчитать количество вхождений каждого слова в списке строк (Word Count).
@@ -127,6 +132,7 @@ Map<String, Long> counts = words.stream()
     ));
 // {apple=3, banana=2, orange=1}
 ===
+ID: 8a87836f-2cf7-415f-934d-a20e6b0e4b37
 CATEGORY: Live Coding
 QUESTION:
 Найти первый неповторяющийся символ в строке.
@@ -142,6 +148,7 @@ Character result = s.chars()           // IntStream
     .findFirst()
     .orElse(null); // 'w'
 ===
+ID: b35b90af-cf4b-4ca2-ace4-2f176accf3ac
 CATEGORY: Live Coding
 QUESTION:
 Реализовать метод, который ждет завершения всех потоков из списка, но не дольше 1 секунды. (Используя CompletableFuture).
@@ -156,6 +163,7 @@ public void waitAll(List<CompletableFuture<String>> futures) {
     }
 }
 ===
+ID: f582f3d7-1a6b-4f6d-88a0-76e7b032c6ae
 CATEGORY: Live Coding
 QUESTION:
 Реализуй класс ImmutablePerson.
@@ -178,6 +186,7 @@ public final class ImmutablePerson {
     }
 }
 ===
+ID: 481682c1-936e-4d41-9e7e-71bec137e3ab
 CATEGORY: Live Coding
 QUESTION:
 Развернуть односвязный список (Reverse LinkedList).
@@ -196,6 +205,7 @@ public ListNode reverseList(ListNode head) {
     return prev;
 }
 ===
+ID: 8d5c7dc3-abab-4ac7-aea4-0ba74670fb10
 CATEGORY: Live Coding
 QUESTION:
 Реализовать Stack, используя две очереди (Queue).
@@ -220,6 +230,7 @@ class MyStack {
     public int pop() { return q1.remove(); }
 }
 ===
+ID: 75e3fd06-0909-4473-b729-c65173204c53
 CATEGORY: Live Coding
 QUESTION:
 Найти два числа в массиве, сумма которых равна целевому числу (Two Sum). O(n).
@@ -236,6 +247,7 @@ public int[] twoSum(int[] nums, int target) {
     throw new IllegalArgumentException("No solution");
 }
 ===
+ID: a4951b82-1649-4819-bee5-01f6e441c29d
 CATEGORY: Live Coding
 QUESTION:
 Реализовать Binary Search (бинарный поиск) в отсортированном массиве.
@@ -251,6 +263,7 @@ public int binarySearch(int[] arr, int target) {
     return -1;
 }
 ===
+ID: eadf1c95-61d2-4c13-a053-7e9e1a755be8
 CATEGORY: Live Coding
 QUESTION:
 Проверить, является ли строка палиндромом (читается одинаково слева направо и справа налево).

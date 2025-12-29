@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="JavaAnkiApp:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/JavaAnkiApp_jar</output-path>
+    <root id="archive" name="JavaAnkiApp.jar">
+      <element id="module-output" name="JavaAnkiApp" />
+      <element id="extracted-dir" path="$USER_HOME$/.jdks/lombok.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

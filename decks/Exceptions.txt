@@ -1,3 +1,4 @@
+ID: b5392dbc-d7de-4872-a319-edddb5a6b10e
 CATEGORY: Exceptions
 QUESTION:
 Что такое Throwable? Назовите его основных наследников.
@@ -7,6 +8,7 @@ ANSWER:
 Error — критические ошибки JVM (StackOverflowError, OutOfMemoryError), которые обычно не нужно обрабатывать.
 Exception — исключения, которые можно и нужно обрабатывать.
 ===
+ID: 6564aa24-19e2-4ac3-a8b3-df9bb17cfaef
 CATEGORY: Exceptions
 QUESTION:
 В чем разница между Checked и Unchecked исключениями?
@@ -14,12 +16,14 @@ ANSWER:
 Checked (проверяемые): Наследуются от Exception (но не RuntimeException). Компилятор требует их обработать (try-catch) или пробросить (throws). Пример: IOException, SQLException.
 Unchecked (непроверяемые): Наследуются от RuntimeException. Компилятор не требует обработки. Обычно указывают на ошибки в логике программы. Пример: NullPointerException, IllegalArgumentException.
 ===
+ID: 0e31f8b8-5316-4a75-a7c0-2390b0d4f5cf
 CATEGORY: Exceptions
 QUESTION:
 Нужно ли обрабатывать Error?
 ANSWER:
 Нет. Error свидетельствует о серьезных проблемах в JVM (например, закончилась память), от которых приложение обычно не может восстановиться корректно.
 ===
+ID: c6da28dd-7214-43cb-86aa-6e5a4152f1a5
 CATEGORY: Exceptions
 QUESTION:
 Что такое try-with-resources?
@@ -29,6 +33,7 @@ try (BufferedReader br = new BufferedReader(new FileReader(path))) {
     // чтение
 } // br.close() вызовется автоматически
 ===
+ID: fcaafb5a-36d2-499d-bbcd-fc77f524f9c9
 CATEGORY: Exceptions
 QUESTION:
 Может ли блок finally не выполниться?
@@ -39,6 +44,7 @@ ANSWER:
 Бесконечный цикл или deadlock внутри блока try.
 Если поток, выполняющий try, был убит (daemon thread).
 ===
+ID: e7d9ae44-5453-409a-a3a0-7c4519396b2a
 CATEGORY: Exceptions
 QUESTION:
 Что произойдет, если исключение выпадет и в блоке try, и в блоке finally?
@@ -46,18 +52,21 @@ ANSWER:
 Исключение из блока finally "подавит" (перекроет) исключение из блока try. Исходное исключение будет потеряно.
 (В try-with-resources наоборот: основное исключение сохраняется, а исключение при закрытии добавляется как suppressed).
 ===
+ID: d411386d-4068-449f-b813-11198df350d7
 CATEGORY: Exceptions
 QUESTION:
 Можно ли использовать return в блоке finally?
 ANSWER:
 Можно, но это плохая практика (антипаттерн). return в finally перекроет любой другой return или выброшенное исключение из блока try/catch. Метод вернет значение из finally, а исключение будет "проглочено".
 ===
+ID: f7a95e20-ca1d-4d94-bccb-36d7e34699dc
 CATEGORY: Exceptions
 QUESTION:
 Что такое "try-catch-finally"? Обязателен ли блок catch?
 ANSWER:
 Конструкция для обработки исключений. Блок catch не обязателен, если есть блок finally (то есть можно try-finally).
 ===
+ID: 9d38b64e-d583-4943-b30e-f24e52aec4d6
 CATEGORY: Exceptions
 QUESTION:
 В чем разница между throw и throws?
@@ -65,12 +74,14 @@ ANSWER:
 throw: используется для явного выбрасывания исключения в коде (throw new Exception()).
 throws: указывается в сигнатуре метода, чтобы сообщить, что метод может выбросить определенный тип исключения (декларация Checked исключений).
 ===
+ID: 6b08cdbc-4376-4f93-84cf-5bad21e68fa8
 CATEGORY: Exceptions
 QUESTION:
 Можно ли создать свой класс исключения?
 ANSWER:
 Да, можно унаследоваться от Exception (для checked) или RuntimeException (для unchecked).
 ===
+ID: 74e2a4a0-5686-42f9-9b29-62e980621534
 CATEGORY: Exceptions
 QUESTION:
 Что такое NullPointerException (NPE) и как его избежать?
@@ -78,6 +89,7 @@ ANSWER:
 Исключение при попытке обращения к методу или полю по ссылке null.
 Избежать: проверки на null, использование Optional, аннотации @NotNull/@Nullable, использование методов Objects.requireNonNull(), паттерн Null Object.
 ===
+ID: 5daab1aa-1329-43de-9957-dc16090964d0
 CATEGORY: Exceptions
 QUESTION:
 Что такое Optional в Java?
@@ -85,6 +97,7 @@ ANSWER:
 Контейнер, который может содержать значение или быть пустым. Появился в Java 8 для борьбы с NPE и более выразительного API.
 Методы: isPresent(), ifPresent(), orElse(), orElseGet(), orElseThrow().
 ===
+ID: d79d92ac-2315-4ea1-a110-038e63e4c9e9
 CATEGORY: Exceptions
 QUESTION:
 В чем разница между orElse() и orElseGet() в Optional?
@@ -92,6 +105,7 @@ ANSWER:
 orElse(T other): аргумент вычисляется всегда, даже если Optional не пуст (жадное выполнение).
 orElseGet(Supplier other): аргумент (лямбда) выполняется только если Optional пуст (ленивое выполнение).
 ===
+ID: 730d6c74-09da-4854-a07f-f475dcf63a37
 CATEGORY: Exceptions
 QUESTION:
 Стоит ли использовать Optional в полях класса или аргументах метода?
@@ -99,6 +113,7 @@ ANSWER:
 Нет. Optional не реализует Serializable (проблемы с сериализацией). Использование в аргументах заставляет вызывающий код оборачивать значения в Optional, что усложняет API и создает лишние объекты.
 Optional предназначен в первую очередь для возвращаемых значений методов.
 ===
+ID: ea3b2bc9-1891-4247-bd01-58872aa7e680
 CATEGORY: Exceptions
 QUESTION:
 Что такое Multi-catch блок?
@@ -106,6 +121,7 @@ ANSWER:
 С Java 7 можно ловить несколько исключений в одном блоке catch, разделяя их вертикальной чертой |. Это уменьшает дублирование кода.
 catch (IOException | SQLException e) { ... }
 ===
+ID: 4e3604cc-f6ae-4d93-b5f0-3cd036a1a564
 CATEGORY: Exceptions
 QUESTION:
 Почему в современных фреймворках (Spring) предпочитают Unchecked исключения?
@@ -113,8 +129,10 @@ ANSWER:
 Checked исключения "загрязняют" код, заставляя пробрасывать throws через всю цепочку вызовов или писать пустые catch.
 Unchecked позволяют обрабатывать ошибки централизованно (например, через @ExceptionHandler в Spring) и не загромождают бизнес-логику.
 ===
+ID: 6dad502b-e5ed-4331-b62a-003ae7abddab
 CATEGORY: Exceptions
 QUESTION:
 Что такое Suppressed Exceptions (Подавленные исключения)?
 ANSWER:
 Механизм, введенный в Java 7 для try-with-resources. Если исключение выбрасывается в блоке try, а затем еще одно при закрытии ресурса (auto-close), то второе исключение не теряется, а добавляется к первому как "подавленное" (доступно через e.getSuppressed()).
+===

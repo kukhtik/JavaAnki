@@ -1,3 +1,4 @@
+ID: 83c102e0-4a05-45b2-9fdf-432fe320fdb5
 CATEGORY: Tools
 QUESTION:
 В чем разница между Maven и Gradle?
@@ -5,6 +6,7 @@ ANSWER:
 Maven: XML-конфигурация (pom.xml). Декларативный, жесткий жизненный цикл. Стандарт де-факто долгое время.
 Gradle: Groovy/Kotlin DSL (build.gradle). Императивный, гибкий, инкрементальная сборка (быстрее), мощный кэш. Современный стандарт (особенно в Android и микросервисах).
 ===
+ID: a1b4a60d-638a-4e62-9d0a-ed469c90379d
 CATEGORY: Tools
 QUESTION:
 Что такое Git Merge vs Git Rebase?

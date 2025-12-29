@@ -1,3 +1,4 @@
+ID: d2a91466-5ddd-4454-a200-68aeb993866c
 CATEGORY: Stream API
 QUESTION:
 Промежуточные vs Терминальные операции.

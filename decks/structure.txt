@@ -1,0 +1,20 @@
+GROUP: Java Core
+FILES: Java Core.txt, OOP.txt, Java Collections.txt, collections.txt
+
+GROUP: Language Features
+FILES: Java 17+ Features.txt, Functional Programming.txt, Exceptions.txt
+
+GROUP: Architecture & Structure
+FILES: Architecture.txt, Методологии.txt
+
+GROUP: Development Practices
+FILES: Clean Code.txt, Testing.txt, Tools.txt
+
+GROUP: Concurrency
+FILES: Multithreading.txt
+
+GROUP: Live Coding & Demos
+FILES: Live Coding.txt
+
+GROUP: Stream API
+FILES: Stream API.txt
